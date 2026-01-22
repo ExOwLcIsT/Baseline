@@ -1,6 +1,7 @@
 {
   "type": "module",
   "scripts": {
+    "build": "tsc",
     "start": "node ./dist/src/main.js",
     "lint": "npx eslint .",
     "test": "jest",
@@ -24,6 +25,7 @@
     "@noble/hashes": "^1.8.0",
     "@noble/secp256k1": "^3.0.0",
     "dotenv": "^17.2.3",
+    "ethers": "^6.16.0",
     "husky": "^9.1.7",
     "jest": "^30.2.0",
     "lint-staged": "^16.2.7",
