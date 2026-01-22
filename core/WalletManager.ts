@@ -1,6 +1,11 @@
 import { getPublicKey, sign, recoverPublicKey } from "@noble/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
-import { bytesToHex, randomBytes, utf8ToBytes } from "@noble/hashes/utils";
+import {
+  bytesToHex,
+  hexToBytes,
+  randomBytes,
+  utf8ToBytes,
+} from "@noble/hashes/utils";
 import util from "node:util";
 import { Address } from "./BaseTypes/Address.js";
 import { Wallet, getBytes } from "ethers";
@@ -40,12 +45,11 @@ class WalletManager {
 
   get address(): string {
     ///  Returns checksummed address.
-    const publicKeyNoPrefix = this.wallet.signingKey.publicKey.slice(2);
-    const hash = keccak_256(publicKeyNoPrefix);
+    
+    const publicKeyNoPrefix = this.wallet.signingKey.publicKey.slice(4);
+    const hash = keccak_256(hexToBytes(publicKeyNoPrefix));
     const addressValue = "0x" + Buffer.from(hash.slice(-20)).toString("hex");
     const address = Address.fromString(addressValue);
-    console.log("a1: " + address);
-    console.log("a2: " + this.wallet.address);
     return address.checksum;
   }
 

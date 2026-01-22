@@ -1,6 +1,6 @@
 import { getPublicKey, sign, recoverPublicKey } from "@noble/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
-import { bytesToHex, randomBytes, utf8ToBytes } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes, randomBytes, utf8ToBytes } from "@noble/hashes/utils";
 import util from "node:util";
 import { Address } from "./BaseTypes/Address.js";
 import { Wallet, getBytes } from "ethers";
@@ -36,8 +36,8 @@ class WalletManager {
     }
     get address() {
         ///  Returns checksummed address.
-        const publicKeyNoPrefix = this.wallet.signingKey.publicKey;
-        const hash = keccak_256(publicKeyNoPrefix);
+        const publicKeyNoPrefix = this.wallet.signingKey.publicKey.slice(4);
+        const hash = keccak_256(hexToBytes(publicKeyNoPrefix));
         const addressValue = "0x" + Buffer.from(hash.slice(-20)).toString("hex");
         const address = Address.fromString(addressValue);
         console.log("a1: " + address);
@@ -56,11 +56,8 @@ class WalletManager {
         const signature = sign(hashedMessage, getBytes(this.wallet.privateKey), {
             format: "recovered",
         });
-        console.log(signature);
         const recoveredPublicKey = recoverPublicKey(signature, hashedMessage);
         const compressedPublicKey = getPublicKey(getBytes(this.wallet.privateKey), true);
-        console.log("pk1: " + bytesToHex(recoveredPublicKey));
-        console.log("pk2: " + bytesToHex(compressedPublicKey));
         if (bytesToHex(recoveredPublicKey) !== bytesToHex(compressedPublicKey)) {
             throw Error("Signature verification failed!");
         }
