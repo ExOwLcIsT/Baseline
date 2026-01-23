@@ -36,3 +36,4 @@ export class TransactionReceipt {
         });
     }
 }
+export default TransactionReceipt;

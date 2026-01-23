@@ -1,6 +1,6 @@
 import { getPublicKey, sign, recoverPublicKey } from "@noble/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
-import { bytesToHex, hexToBytes, randomBytes, utf8ToBytes } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes, randomBytes, utf8ToBytes, } from "@noble/hashes/utils";
 import util from "node:util";
 import { Address } from "./BaseTypes/Address.js";
 import { Wallet, getBytes } from "ethers";
@@ -13,7 +13,7 @@ class WalletManager {
       - Encrypted keyfile (optional stretch goal)
     */
     wallet;
-    static from_env(env_var = "privateKey") {
+    static from_env(env_var = "PRIVATE_KEY") {
         const key = process.env[env_var];
         if (!key) {
             throw new Error(`${env_var} not found`);
@@ -40,8 +40,6 @@ class WalletManager {
         const hash = keccak_256(hexToBytes(publicKeyNoPrefix));
         const addressValue = "0x" + Buffer.from(hash.slice(-20)).toString("hex");
         const address = Address.fromString(addressValue);
-        console.log("a1: " + address);
-        console.log("a2: " + this.wallet.address);
         return address.checksum;
     }
     sign_message(message) {
@@ -63,12 +61,14 @@ class WalletManager {
         }
         return "0x" + Buffer.from(signature).toString("hex");
     }
-    // def sign_typed_data(self, domain: dict, types: dict, value: dict) -> SignedMessage:
-    //     """Sign EIP-712 typed data (used by many DeFi protocols)."""
-    //     ...
-    // def sign_transaction(self, tx: dict) -> SignedTransaction:
-    //     """Sign a transaction dict."""
-    //     ...
+    async sign_typed_data(domain, types, value) {
+        // Sign EIP-712 typed data (used by many DeFi protocols).
+        return await this.wallet.signTypedData(domain, types, value);
+    }
+    async sign_transaction(tx) {
+        // Sign a transaction dict.
+        return await this.wallet.signTransaction(tx);
+    }
     toString() {
         return `WalletManager(address=${this.address})`;
     }

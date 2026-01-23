@@ -40,3 +40,4 @@ export class Address {
         return this.checksum;
     }
 }
+export default Address;

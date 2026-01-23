@@ -1,7 +1,4 @@
-
-
-
-export  class TokenAmount {
+export class TokenAmount {
   readonly raw: bigint;
   readonly decimals: number;
   readonly symbol?: string;
@@ -21,10 +18,14 @@ export  class TokenAmount {
   static fromHuman(
     amount: string | bigint,
     decimals: number,
-    symbol?: string
+    symbol?: string,
   ): TokenAmount {
     if (typeof amount === "bigint") {
-      return new TokenAmount(amount * 10n ** BigInt(decimals), decimals, symbol);
+      return new TokenAmount(
+        amount * 10n ** BigInt(decimals),
+        decimals,
+        symbol,
+      );
     }
 
     const [whole, frac = ""] = amount.split(".");
@@ -35,9 +36,7 @@ export  class TokenAmount {
 
     const padded = frac.padEnd(decimals, "0");
 
-    const raw =
-      BigInt(whole) * 10n ** BigInt(decimals) +
-      BigInt(padded || "0");
+    const raw = BigInt(whole) * 10n ** BigInt(decimals) + BigInt(padded || "0");
 
     return new TokenAmount(raw, decimals, symbol);
   }
@@ -61,11 +60,7 @@ export  class TokenAmount {
   add(other: TokenAmount): TokenAmount {
     this.assertSameDecimals(other);
 
-    return new TokenAmount(
-      this.raw + other.raw,
-      this.decimals,
-      this.symbol
-    );
+    return new TokenAmount(this.raw + other.raw, this.decimals, this.symbol);
   }
 
   mul(factor: bigint | number): TokenAmount {
@@ -79,7 +74,7 @@ export  class TokenAmount {
   }
 
   toString(): string {
-    return `${this.human} ${this.symbol ?? ""}`.trim();
+    return `${this.human}`;
   }
 
   toJSON(): string {
@@ -98,3 +93,5 @@ export type TxDict = {
   maxPriorityFeePerGas?: string;
   chainId: number;
 };
+
+export default TokenAmount;

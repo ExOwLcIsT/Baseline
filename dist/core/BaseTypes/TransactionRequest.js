@@ -32,3 +32,4 @@ export class TransactionRequest {
         };
     }
 }
+export default TransactionRequest;

@@ -20,8 +20,7 @@ export class TokenAmount {
             throw new Error("Too many decimal places");
         }
         const padded = frac.padEnd(decimals, "0");
-        const raw = BigInt(whole) * 10n ** BigInt(decimals) +
-            BigInt(padded || "0");
+        const raw = BigInt(whole) * 10n ** BigInt(decimals) + BigInt(padded || "0");
         return new TokenAmount(raw, decimals, symbol);
     }
     get human() {
@@ -50,9 +49,10 @@ export class TokenAmount {
         }
     }
     toString() {
-        return `${this.human} ${this.symbol ?? ""}`.trim();
+        return `${this.human}`;
     }
     toJSON() {
         return this.toString();
     }
 }
+export default TokenAmount;

@@ -1,7 +1,6 @@
 import { Address } from "./Address.js";
 import { TokenAmount, TxDict } from "./TokenAmount.js";
-
-export class TransactionRequest {
+export class CustomTransactionRequest {
   readonly to: Address;
   readonly value: TokenAmount;
   readonly data: Uint8Array;
@@ -36,7 +35,6 @@ export class TransactionRequest {
 
     Object.freeze(this);
   }
-
   // convert to web3/ethers compatible
   toDict(): TxDict {
     return {
@@ -52,3 +50,4 @@ export class TransactionRequest {
     };
   }
 }
+export default TransactionRequest;

@@ -1,6 +1,7 @@
 import { serialize } from "node:v8";
 
 import { keccak_256 } from "@noble/hashes/sha3";
+import { bytesToHex } from "@noble/hashes/utils";
 
 class CanonicalSerializer {
   /*
@@ -35,9 +36,16 @@ class CanonicalSerializer {
     return hashed;
   }
 
-  // @staticmethod
-  // def verify_determinism(obj: Any, iterations: int = 100) -> bool:
-  //     """Verifies serialization is deterministic over N iterations."""
-  //     ...
+  static verify_determinism(obj: any, iterations: number = 100): Boolean {
+    //Verifies serialization is deterministic over N iterations.
+    const hashed = bytesToHex(this.hash(obj));
+    for (let i = 0; i < iterations - 1; i++) {
+      const hashedOnIteration = bytesToHex(this.hash(obj));
+      if (hashed !== hashedOnIteration) {
+        return false;
+      }
+    }
+    return true;
+  }
 }
 export default CanonicalSerializer;

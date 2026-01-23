@@ -9,7 +9,7 @@ export interface Web3Receipt {
   logs: unknown[];
 } 
 
-export class TransactionReceipt {
+export class CustomTransactionReceipt {
   public readonly txHash: string;
   public readonly blockNumber: number;
   public readonly status: boolean;
@@ -61,3 +61,5 @@ export class TransactionReceipt {
     });
   }
 }
+
+export default TransactionReceipt;
