@@ -50,4 +50,3 @@ export class CustomTransactionRequest {
     };
   }
 }
-export default TransactionRequest;

@@ -1,8 +1,8 @@
 import TokenAmount from "../core/BaseTypes/TokenAmount.js";
-import Address from "../core/BaseTypes/Address.js";
+import { Address } from "../core/BaseTypes/Address.js";
 import { JsonRpcProvider, TransactionReceipt } from "ethers";
 import GasPrice from "./GasPrice.js";
-import CustomTransactionRequest from "../core/BaseTypes/TransactionRequest.js";
+import { CustomTransactionRequest } from "../core/BaseTypes/TransactionRequest.js";
 class ChainClient {
   /*
     Ethereum RPC client with reliability features.

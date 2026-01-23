@@ -35,16 +35,16 @@ class ChainClient {
             }
         }
     }
-    async get_balance(address) {
+    async getBalance(address) {
         const balance = await this.provider.getBalance(address.lower);
         console.log(balance);
         return TokenAmount.fromRaw(balance, 18, ",");
     }
-    async get_nonce(address, block = "pending") {
+    async getNonce(address, block = "pending") {
         const nonce = await this.provider.getTransactionCount(address.lower, block);
         return nonce;
     }
-    async get_gas_price() {
+    async getGasPrice() {
         //Returns current gas price info (base fee, priority fee estimates).
         const block = await this.provider.getBlock("latest");
         const feeData = await this.provider.getFeeData();
@@ -56,6 +56,36 @@ class ChainClient {
         return new GasPrice(base, priority / 2n, // low
         priority, // medium
         priority * 2n);
+    }
+    async estimateGas(tx) {
+        const estimatedGas = await this.provider.estimateGas(tx.toDict());
+        return estimatedGas;
+    }
+    async sendTransaction(signed_tx) {
+        // Send and return tx hash. Does NOT wait for confirmation.
+        const res = await this.provider.broadcastTransaction(signed_tx);
+        const txHash = res.hash;
+        return txHash;
+    }
+    async wait_for_receipt(tx_hash, timeout = 120) {
+        // Wait for transaction confirmation.
+        const timeout_seconds = timeout * 1000;
+        const confirms = 1;
+        const receipt = await this.provider.waitForTransaction(tx_hash, confirms, timeout_seconds);
+        return receipt;
+    }
+    async get_transaction(tx_hash) {
+        const result = await this.provider.getTransaction(tx_hash);
+        return result;
+    }
+    async get_receipt(tx_hash) {
+        const receipt = await this.provider.getTransactionReceipt(tx_hash);
+        return receipt;
+    }
+    async call(tx) {
+        // eth_call - simulate transaction without sending.
+        const res = this.provider.call(tx.toDict());
+        return res;
     }
 }
 export default ChainClient;

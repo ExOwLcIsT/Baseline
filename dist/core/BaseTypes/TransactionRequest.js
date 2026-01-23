@@ -1,4 +1,4 @@
-export class TransactionRequest {
+export class CustomTransactionRequest {
     to;
     value;
     data;
@@ -32,4 +32,3 @@ export class TransactionRequest {
         };
     }
 }
-export default TransactionRequest;

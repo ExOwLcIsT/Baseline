@@ -3,7 +3,7 @@ import { keccak_256 } from "@noble/hashes/sha3";
 import { bytesToHex, hexToBytes, randomBytes, utf8ToBytes, } from "@noble/hashes/utils";
 import util from "node:util";
 import { Address } from "./BaseTypes/Address.js";
-import { Wallet, getBytes } from "ethers";
+import { Transaction, Wallet, getBytes, verifyTypedData, } from "ethers";
 class WalletManager {
     /*
       Manages wallet operations: key loading, signing, verification.
@@ -63,11 +63,21 @@ class WalletManager {
     }
     async sign_typed_data(domain, types, value) {
         // Sign EIP-712 typed data (used by many DeFi protocols).
-        return await this.wallet.signTypedData(domain, types, value);
+        const signature = await this.wallet.signTypedData(domain, types, value);
+        const recoveredAddress = verifyTypedData(domain, types, value, signature);
+        if (recoveredAddress !== this.wallet.address) {
+            throw Error("Signature verification failed!");
+        }
+        return "0x" + Buffer.from(signature).toString("hex");
     }
     async sign_transaction(tx) {
         // Sign a transaction dict.
-        return await this.wallet.signTransaction(tx);
+        const raw = await this.wallet.signTransaction(tx.toDict());
+        const parsed = Transaction.from(raw);
+        if (parsed.from?.toLowerCase() !== this.wallet.address.toLowerCase()) {
+            throw new Error("Transaction signature verification failed");
+        }
+        return raw;
     }
     toString() {
         return `WalletManager(address=${this.address})`;

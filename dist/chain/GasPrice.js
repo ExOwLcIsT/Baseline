@@ -27,7 +27,7 @@ class GasPrice {
         return bufferedBase + tip;
     }
     toString() {
-        return `GasPrice{\nbaseFee=${this.baseFee},\npriorityFeeLow=${this.priorityFeeLow},\npriorityFeeMedium=${this.priorityFeeMedium},\npriorityFeeHigh=${this.priorityFeeHigh}\n}`;
+        return `GasPrice {\nbaseFee=${this.baseFee},\npriorityFeeLow=${this.priorityFeeLow},\npriorityFeeMedium=${this.priorityFeeMedium},\npriorityFeeHigh=${this.priorityFeeHigh}\n}`;
     }
 }
 export default GasPrice;

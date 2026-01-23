@@ -48,10 +48,10 @@ export class CustomTransactionReceipt {
   /**
    * Parse receipt from web3/ethers result
    */
-  static fromWeb3(receipt: Web3Receipt): TransactionReceipt {
+  static fromWeb3(receipt: Web3Receipt): CustomTransactionReceipt {
     const toBigInt = (v: bigint | number | string) => BigInt(v);
 
-    return new TransactionReceipt({
+    return new CustomTransactionReceipt({
       txHash: receipt.transactionHash,
       blockNumber: Number(receipt.blockNumber),
       status: Boolean(Number(receipt.status)),
@@ -61,5 +61,3 @@ export class CustomTransactionReceipt {
     });
   }
 }
-
-export default TransactionReceipt;

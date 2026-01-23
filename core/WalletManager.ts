@@ -8,9 +8,15 @@ import {
 } from "@noble/hashes/utils";
 import util from "node:util";
 import { Address } from "./BaseTypes/Address.js";
-import { TypedDataField, Wallet, getBytes } from "ethers";
+import {
+  Transaction,
+  TypedDataField,
+  Wallet,
+  getBytes,
+  verifyTypedData,
+} from "ethers";
 import { TypedDataDomain } from "ethers";
-import { TransactionRequest } from "ethers";
+import { CustomTransactionRequest } from "../core/BaseTypes/TransactionRequest.js";
 class WalletManager {
   /*
     Manages wallet operations: key loading, signing, verification.
@@ -55,8 +61,7 @@ class WalletManager {
     return address.checksum;
   }
 
-  sign_message(message: string):
-  string {
+  sign_message(message: string): string {
     // Sign an arbitrary message (with EIP-191 prefix).
 
     if (message.length === 0) {
@@ -91,14 +96,26 @@ class WalletManager {
     value: Record<string, any>,
   ): Promise<string> {
     // Sign EIP-712 typed data (used by many DeFi protocols).
+    const signature = await this.wallet.signTypedData(domain, types, value);
+    const recoveredAddress = verifyTypedData(domain, types, value, signature);
 
-    return await this.wallet.signTypedData(domain, types, value);
+    if (recoveredAddress !== this.wallet.address) {
+      throw Error("Signature verification failed!");
+    }
+    return "0x" + Buffer.from(signature).toString("hex");
   }
 
-  async sign_transaction(tx: TransactionRequest): Promise<string> {
+  async sign_transaction(tx: CustomTransactionRequest): Promise<string> {
     // Sign a transaction dict.
+    const raw = await this.wallet.signTransaction(tx.toDict());
 
-    return await this.wallet.signTransaction(tx);
+    const parsed = Transaction.from(raw);
+
+    if (parsed.from?.toLowerCase() !== this.wallet.address.toLowerCase()) {
+      throw new Error("Transaction signature verification failed");
+    }
+
+    return raw;
   }
 
   toString() {

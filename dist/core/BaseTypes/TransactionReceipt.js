@@ -1,5 +1,5 @@
 import { TokenAmount } from "./TokenAmount.js";
-export class TransactionReceipt {
+export class CustomTransactionReceipt {
     txHash;
     blockNumber;
     status;
@@ -26,7 +26,7 @@ export class TransactionReceipt {
      */
     static fromWeb3(receipt) {
         const toBigInt = (v) => BigInt(v);
-        return new TransactionReceipt({
+        return new CustomTransactionReceipt({
             txHash: receipt.transactionHash,
             blockNumber: Number(receipt.blockNumber),
             status: Boolean(Number(receipt.status)),
@@ -36,4 +36,3 @@ export class TransactionReceipt {
         });
     }
 }
-export default TransactionReceipt;
