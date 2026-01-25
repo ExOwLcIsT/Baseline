@@ -1,16 +1,16 @@
 import { Address } from "./Address.js";
 import { TokenAmount, TxDict } from "./TokenAmount.js";
 export class CustomTransactionRequest {
-  readonly to: Address;
-  readonly value: TokenAmount;
-  readonly data: Uint8Array;
+  to: Address;
+  value: TokenAmount;
+  data: Uint8Array;
 
-  readonly nonce?: number;
-  readonly gasLimit?: number;
-  readonly maxFeePerGas?: bigint;
-  readonly maxPriorityFee?: bigint;
+  nonce?: number;
+  gasLimit?: number;
+  maxFeePerGas?: bigint;
+  maxPriorityFee?: bigint;
 
-  readonly chainId: number;
+  chainId: number;
 
   constructor(params: {
     to: Address;
@@ -32,10 +32,9 @@ export class CustomTransactionRequest {
     this.maxPriorityFee = params.maxPriorityFee;
 
     this.chainId = params.chainId ?? 1;
-
-    Object.freeze(this);
   }
-  // convert to web3/ethers compatible
+
+  // convert to ethers compatible
   toDict(): TxDict {
     return {
       to: this.to.checksum,

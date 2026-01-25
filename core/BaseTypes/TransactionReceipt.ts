@@ -1,3 +1,4 @@
+import { Log, TransactionReceipt } from "ethers";
 import { TokenAmount } from "./TokenAmount.js";
 
 export interface Web3Receipt {
@@ -7,7 +8,7 @@ export interface Web3Receipt {
   gasUsed: bigint | number | string;
   effectiveGasPrice: bigint | number | string;
   logs: unknown[];
-} 
+}
 
 export class CustomTransactionReceipt {
   public readonly txHash: string;
@@ -15,7 +16,7 @@ export class CustomTransactionReceipt {
   public readonly status: boolean;
   public readonly gasUsed: bigint;
   public readonly effectiveGasPrice: bigint;
-  public readonly logs: unknown[];
+  public logs: readonly Log[];
 
   constructor(params: {
     txHash: string;
@@ -23,7 +24,7 @@ export class CustomTransactionReceipt {
     status: boolean;
     gasUsed: bigint;
     effectiveGasPrice: bigint;
-    logs?: unknown[];
+    logs?: readonly Log[];
   }) {
     this.txHash = params.txHash;
     this.blockNumber = params.blockNumber;
@@ -46,17 +47,20 @@ export class CustomTransactionReceipt {
   }
 
   /**
-   * Parse receipt from web3/ethers result
+   * Parse receipt from ethers result
    */
-  static fromWeb3(receipt: Web3Receipt): CustomTransactionReceipt {
-    const toBigInt = (v: bigint | number | string) => BigInt(v);
-
+  static fromEther(
+    receipt: TransactionReceipt | null,
+  ): CustomTransactionReceipt | null {
+    if (receipt === null) {
+      return null;
+    }
     return new CustomTransactionReceipt({
-      txHash: receipt.transactionHash,
+      txHash: receipt.hash,
       blockNumber: Number(receipt.blockNumber),
       status: Boolean(Number(receipt.status)),
-      gasUsed: toBigInt(receipt.gasUsed),
-      effectiveGasPrice: toBigInt(receipt.effectiveGasPrice),
+      gasUsed: BigInt(receipt.gasUsed),
+      effectiveGasPrice: BigInt(receipt.gasPrice),
       logs: receipt.logs ?? [],
     });
   }

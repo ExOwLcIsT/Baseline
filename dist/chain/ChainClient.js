@@ -1,6 +1,7 @@
 import TokenAmount from "../core/BaseTypes/TokenAmount.js";
 import { JsonRpcProvider } from "ethers";
 import GasPrice from "./GasPrice.js";
+import { CustomTransactionReceipt } from "../core/BaseTypes/TransactionReceipt.js";
 class ChainClient {
     /*
       Ethereum RPC client with reliability features.
@@ -67,20 +68,22 @@ class ChainClient {
         const txHash = res.hash;
         return txHash;
     }
-    async wait_for_receipt(tx_hash, timeout = 120) {
+    async waitForReceipt(tx_hash, timeout = 120) {
         // Wait for transaction confirmation.
         const timeout_seconds = timeout * 1000;
         const confirms = 1;
         const receipt = await this.provider.waitForTransaction(tx_hash, confirms, timeout_seconds);
-        return receipt;
+        const txReceipt = CustomTransactionReceipt.fromEther(receipt);
+        return txReceipt;
     }
-    async get_transaction(tx_hash) {
+    async getTransaction(tx_hash) {
         const result = await this.provider.getTransaction(tx_hash);
         return result;
     }
-    async get_receipt(tx_hash) {
+    async getReceipt(tx_hash) {
         const receipt = await this.provider.getTransactionReceipt(tx_hash);
-        return receipt;
+        const txReceipt = CustomTransactionReceipt.fromEther(receipt);
+        return txReceipt;
     }
     async call(tx) {
         // eth_call - simulate transaction without sending.

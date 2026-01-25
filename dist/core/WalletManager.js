@@ -13,7 +13,7 @@ class WalletManager {
       - Encrypted keyfile (optional stretch goal)
     */
     wallet;
-    static from_env(env_var = "PRIVATE_KEY") {
+    static fromEnv(env_var = "PRIVATE_KEY") {
         const key = process.env[env_var];
         if (!key) {
             throw new Error(`${env_var} not found`);
@@ -42,7 +42,7 @@ class WalletManager {
         const address = Address.fromString(addressValue);
         return address.checksum;
     }
-    sign_message(message) {
+    signMessage(message) {
         // Sign an arbitrary message (with EIP-191 prefix).
         if (message.length === 0) {
             throw Error("Can not sign empty message");
@@ -61,7 +61,7 @@ class WalletManager {
         }
         return "0x" + Buffer.from(signature).toString("hex");
     }
-    async sign_typed_data(domain, types, value) {
+    async signTypedData(domain, types, value) {
         // Sign EIP-712 typed data (used by many DeFi protocols).
         const signature = await this.wallet.signTypedData(domain, types, value);
         const recoveredAddress = verifyTypedData(domain, types, value, signature);
@@ -70,7 +70,7 @@ class WalletManager {
         }
         return "0x" + Buffer.from(signature).toString("hex");
     }
-    async sign_transaction(tx) {
+    async signTransaction(tx) {
         // Sign a transaction dict.
         const raw = await this.wallet.signTransaction(tx.toDict());
         const parsed = Transaction.from(raw);

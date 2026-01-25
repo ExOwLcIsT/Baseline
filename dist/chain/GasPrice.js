@@ -10,7 +10,7 @@ class GasPrice {
         this.priorityFeeMedium = medium;
         this.priorityFeeHigh = high;
     }
-    get_max_fee(priority = "medium", buffer = 1.2) {
+    getMaxFee(priority = "medium", buffer = 1.2) {
         //Calculate maxFeePerGas with buffer for base fee increase.
         let tip;
         switch (priority) {

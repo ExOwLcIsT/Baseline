@@ -12,7 +12,7 @@ class GasPrice {
     this.priorityFeeHigh = high;
   }
 
-  get_max_fee(priority: string = "medium", buffer: number = 1.2): bigint {
+  getMaxFee(priority: string = "medium", buffer: number = 1.2): bigint {
     //Calculate maxFeePerGas with buffer for base fee increase.
     let tip: bigint;
 

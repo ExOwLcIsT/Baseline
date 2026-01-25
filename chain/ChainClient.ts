@@ -1,8 +1,9 @@
 import TokenAmount from "../core/BaseTypes/TokenAmount.js";
 import { Address } from "../core/BaseTypes/Address.js";
-import { JsonRpcProvider, TransactionReceipt } from "ethers";
+import { JsonRpcProvider } from "ethers";
 import GasPrice from "./GasPrice.js";
 import { CustomTransactionRequest } from "../core/BaseTypes/TransactionRequest.js";
+import { CustomTransactionReceipt } from "../core/BaseTypes/TransactionReceipt.js";
 class ChainClient {
   /*
     Ethereum RPC client with reliability features.
@@ -83,10 +84,10 @@ class ChainClient {
     return txHash;
   }
 
-  async wait_for_receipt(
+  async waitForReceipt(
     tx_hash: string,
     timeout: number = 120,
-  ): Promise<TransactionReceipt | null> {
+  ): Promise<CustomTransactionReceipt | null> {
     // Wait for transaction confirmation.
     const timeout_seconds = timeout * 1000;
     const confirms = 1;
@@ -95,17 +96,19 @@ class ChainClient {
       confirms,
       timeout_seconds,
     );
-    return receipt;
+    const txReceipt = CustomTransactionReceipt.fromEther(receipt);
+    return txReceipt;
   }
 
-  async get_transaction(tx_hash: string) {
+  async getTransaction(tx_hash: string) {
     const result = await this.provider.getTransaction(tx_hash);
     return result;
   }
 
-  async get_receipt(tx_hash: string): Promise<TransactionReceipt | null> {
+  async getReceipt(tx_hash: string): Promise<CustomTransactionReceipt | null> {
     const receipt = await this.provider.getTransactionReceipt(tx_hash);
-    return receipt;
+    const txReceipt = CustomTransactionReceipt.fromEther(receipt);
+    return txReceipt;
   }
 
   async call(tx: CustomTransactionRequest): Promise<string> {

@@ -27,7 +27,7 @@ class WalletManager {
   */
 
   private readonly wallet: Wallet;
-  public static from_env(env_var: string = "PRIVATE_KEY"): WalletManager {
+  public static fromEnv(env_var: string = "PRIVATE_KEY"): WalletManager {
     const key = process.env[env_var];
     if (!key) {
       throw new Error(`${env_var} not found`);
@@ -61,7 +61,7 @@ class WalletManager {
     return address.checksum;
   }
 
-  sign_message(message: string): string {
+  signMessage(message: string): string {
     // Sign an arbitrary message (with EIP-191 prefix).
 
     if (message.length === 0) {
@@ -90,7 +90,7 @@ class WalletManager {
     return "0x" + Buffer.from(signature).toString("hex");
   }
 
-  async sign_typed_data(
+  async signTypedData(
     domain: TypedDataDomain,
     types: Record<string, Array<TypedDataField>>,
     value: Record<string, any>,
@@ -105,7 +105,7 @@ class WalletManager {
     return "0x" + Buffer.from(signature).toString("hex");
   }
 
-  async sign_transaction(tx: CustomTransactionRequest): Promise<string> {
+  async signTransaction(tx: CustomTransactionRequest): Promise<string> {
     // Sign a transaction dict.
     const raw = await this.wallet.signTransaction(tx.toDict());
 

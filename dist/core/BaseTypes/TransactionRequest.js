@@ -16,9 +16,8 @@ export class CustomTransactionRequest {
         this.maxFeePerGas = params.maxFeePerGas;
         this.maxPriorityFee = params.maxPriorityFee;
         this.chainId = params.chainId ?? 1;
-        Object.freeze(this);
     }
-    // convert to web3/ethers compatible
+    // convert to ethers compatible
     toDict() {
         return {
             to: this.to.checksum,

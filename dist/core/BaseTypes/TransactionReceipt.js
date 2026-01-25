@@ -22,16 +22,18 @@ export class CustomTransactionReceipt {
         return TokenAmount.fromRaw(this.gasUsed * this.effectiveGasPrice, 18, "ETH");
     }
     /**
-     * Parse receipt from web3/ethers result
+     * Parse receipt from ethers result
      */
-    static fromWeb3(receipt) {
-        const toBigInt = (v) => BigInt(v);
+    static fromEther(receipt) {
+        if (receipt === null) {
+            return null;
+        }
         return new CustomTransactionReceipt({
-            txHash: receipt.transactionHash,
+            txHash: receipt.hash,
             blockNumber: Number(receipt.blockNumber),
             status: Boolean(Number(receipt.status)),
-            gasUsed: toBigInt(receipt.gasUsed),
-            effectiveGasPrice: toBigInt(receipt.effectiveGasPrice),
+            gasUsed: BigInt(receipt.gasUsed),
+            effectiveGasPrice: BigInt(receipt.gasPrice),
             logs: receipt.logs ?? [],
         });
     }
