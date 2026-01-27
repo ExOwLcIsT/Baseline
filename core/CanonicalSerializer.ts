@@ -1,5 +1,3 @@
-import { serialize } from "node:v8";
-
 import { keccak_256 } from "@noble/hashes/sha3";
 import { bytesToHex } from "@noble/hashes/utils";
 
@@ -41,7 +39,7 @@ class CanonicalSerializer {
 
   static hash(obj: any): Uint8Array {
     // Returns keccak256 of canonical serialization.
-    const serialized = serialize(obj);
+    const serialized = this.serialize(obj);
     const hashed = keccak_256(serialized);
     return hashed;
   }
