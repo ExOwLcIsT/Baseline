@@ -4,7 +4,7 @@
     "build": "tsc",
     "start": "node ./dist/src/main.js",
     "lint": "npx eslint .",
-    "test": "jest",
+    "test": "vitest",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -17,9 +17,9 @@
     "@eslint/js": "^9.39.2",
     "@types/jest": "^30.0.0",
     "eslint": "^9.39.2",
-    "ts-jest": "^29.4.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.53.0"
+    "typescript-eslint": "^8.53.0",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@noble/hashes": "^1.8.0",
@@ -27,7 +27,6 @@
     "dotenv": "^17.2.3",
     "ethers": "^6.16.0",
     "husky": "^9.1.7",
-    "jest": "^30.2.0",
     "lint-staged": "^16.2.7",
     "prettier": "^3.8.0"
   }

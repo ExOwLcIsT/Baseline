@@ -4,6 +4,7 @@ import WalletManager from "../core/WalletManager.js";
 import ChainClient from "./ChainClient.js";
 import TokenAmount from "../core/BaseTypes/TokenAmount.js";
 import { CustomTransactionReceipt } from "../core/BaseTypes/TransactionReceipt.js";
+import { NonceTooLow } from "./ChainErrors.js";
 
 export class TransactionBuilder {
   /*
@@ -64,7 +65,13 @@ export class TransactionBuilder {
     this.params.data = calldata;
     return this;
   }
-  nonce(nonce: number): TransactionBuilder {
+  async nonce(nonce: number): Promise<TransactionBuilder> {
+    const clientNonce = await this.client.getNonce(
+      Address.fromString(this.wallet.address),
+    );
+    if (nonce < clientNonce) {
+      throw new NonceTooLow();
+    }
     this.params.nonce = nonce;
     return this;
   }
@@ -73,7 +80,7 @@ export class TransactionBuilder {
     return this;
   }
   async withGasEstimate(buffer: number = 1.2): Promise<this> {
-    const tx = new CustomTransactionRequest(this.params as any);
+    const tx = new CustomTransactionRequest(this.params);
 
     const estimated = await this.client.estimateGas(tx);
 

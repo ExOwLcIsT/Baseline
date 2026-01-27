@@ -1,9 +1,8 @@
-import { getPublicKey, sign, recoverPublicKey } from "@noble/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
-import { bytesToHex, hexToBytes, randomBytes, utf8ToBytes, } from "@noble/hashes/utils";
-import util from "node:util";
+import { bytesToHex, hexToBytes, randomBytes, } from "@noble/hashes/utils";
+import * as util from "node:util";
 import { Address } from "./BaseTypes/Address.js";
-import { Transaction, Wallet, getBytes, verifyTypedData, } from "ethers";
+import { Transaction, Wallet, verifyMessage, verifyTypedData, } from "ethers";
 class WalletManager {
     /*
       Manages wallet operations: key loading, signing, verification.
@@ -44,22 +43,21 @@ class WalletManager {
     }
     signMessage(message) {
         // Sign an arbitrary message (with EIP-191 prefix).
-        if (message.length === 0) {
-            throw Error("Can not sign empty message");
+        if (!message.length) {
+            throw new Error("Can not sign empty message");
         }
-        const msgBytes = utf8ToBytes(message);
-        const prefix = `\x19Ethereum Signed Message:\n${msgBytes.length}`;
-        const prefixed = utf8ToBytes(prefix);
-        const hashedMessage = keccak_256(new Uint8Array([...prefixed, ...msgBytes]));
-        const signature = sign(hashedMessage, getBytes(this.wallet.privateKey), {
-            format: "recovered",
-        });
-        const recoveredPublicKey = recoverPublicKey(signature, hashedMessage);
-        const compressedPublicKey = getPublicKey(getBytes(this.wallet.privateKey), true);
-        if (bytesToHex(recoveredPublicKey) !== bytesToHex(compressedPublicKey)) {
+        // const msgBytes = utf8ToBytes(message);
+        // const prefix = `\x19Ethereum Signed Message:\n${msgBytes.length}`;
+        // const prefixed = utf8ToBytes(prefix);
+        // const hashedMessage = keccak_256(
+        //   new Uint8Array([...prefixed, ...msgBytes]),
+        // );
+        const signature = this.wallet.signMessageSync(message);
+        const recovered = verifyMessage(message, signature);
+        if (recovered !== this.address) {
             throw Error("Signature verification failed!");
         }
-        return "0x" + Buffer.from(signature).toString("hex");
+        return signature;
     }
     async signTypedData(domain, types, value) {
         // Sign EIP-712 typed data (used by many DeFi protocols).
@@ -68,7 +66,7 @@ class WalletManager {
         if (recoveredAddress !== this.wallet.address) {
             throw Error("Signature verification failed!");
         }
-        return "0x" + Buffer.from(signature).toString("hex");
+        return signature;
     }
     async signTransaction(tx) {
         // Sign a transaction dict.

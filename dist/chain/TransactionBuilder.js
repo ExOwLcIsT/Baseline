@@ -1,4 +1,6 @@
 import { CustomTransactionRequest } from "../core/BaseTypes/TransactionRequest.js";
+import { Address } from "../core/BaseTypes/Address.js";
+import { NonceTooLow } from "./ChainErrors.js";
 export class TransactionBuilder {
     /*
       Fluent builder for transactions.
@@ -36,7 +38,11 @@ export class TransactionBuilder {
         this.params.data = calldata;
         return this;
     }
-    nonce(nonce) {
+    async nonce(nonce) {
+        const clientNonce = await this.client.getNonce(Address.fromString(this.wallet.address));
+        if (nonce < clientNonce) {
+            throw new NonceTooLow();
+        }
         this.params.nonce = nonce;
         return this;
     }

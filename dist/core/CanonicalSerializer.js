@@ -12,16 +12,28 @@ class CanonicalSerializer {
       - Consistent unicode handling
       */
     static serialize(obj) {
-        // Sort keys
-        const sortedKeys = Object.keys(obj).sort();
-        const sortedObj = {};
-        for (const key of sortedKeys) {
-            sortedObj[key] = obj[key];
+        // Внутрішня функція для рекурсивного сортування об'єктів
+        function sortObject(value) {
+            if (Array.isArray(value)) {
+                // Масиви залишаємо як є, але серіалізуємо елементи рекурсивно
+                return value.map(sortObject);
+            }
+            else if (value !== null && typeof value === "object") {
+                const sortedKeys = Object.keys(value).sort();
+                const sortedObj = {};
+                for (const key of sortedKeys) {
+                    sortedObj[key] = sortObject(value[key]);
+                }
+                return sortedObj;
+            }
+            else {
+                // Прості значення повертаємо без змін
+                return value;
+            }
         }
-        // Convert to JSON string without spaces
-        const jsonStr = JSON.stringify(sortedObj);
-        // Return bytes
-        return new TextEncoder().encode(jsonStr); // Uint8Array
+        const sorted = sortObject(obj);
+        const jsonStr = JSON.stringify(sorted); // JSON без пробілів
+        return new TextEncoder().encode(jsonStr);
     }
     static hash(obj) {
         // Returns keccak256 of canonical serialization.

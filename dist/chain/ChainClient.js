@@ -2,6 +2,7 @@ import TokenAmount from "../core/BaseTypes/TokenAmount.js";
 import { JsonRpcProvider } from "ethers";
 import GasPrice from "./GasPrice.js";
 import { CustomTransactionReceipt } from "../core/BaseTypes/TransactionReceipt.js";
+import { RPCError } from "./ChainErrors.js";
 class ChainClient {
     /*
       Ethereum RPC client with reliability features.
@@ -13,24 +14,22 @@ class ChainClient {
       - Proper error classification
       */
     provider;
-    constructor(rpc_url, timeout = 30, max_retries = 3) {
+    constructor(rpc_url, max_retries = 3) {
         if (!rpc_url) {
             rpc_url = process.env["INFURA_RPC_URL"];
             if (!rpc_url) {
-                throw Error("No RPC URL provided. Set INFURA_RPC_URL environment variable or pass rpc_url parameter.");
+                throw new RPCError("No RPC URL provided. Set INFURA_RPC_URL environment variable or pass rpc_url parameter.");
             }
         }
-        let connected = false;
         this.provider = new JsonRpcProvider(rpc_url);
         for (let i = 0; i < max_retries; i++) {
             try {
                 this.provider.getBlockNumber();
-                connected = true;
                 break;
             }
-            catch (err) {
+            catch (error) {
                 if (i === max_retries - 1) {
-                    throw new Error(`Failed to connect to ${rpc_url}`);
+                    throw new RPCError(`Failed to connect to ${rpc_url}`);
                 }
                 this.provider = new JsonRpcProvider(rpc_url);
             }
@@ -50,7 +49,7 @@ class ChainClient {
         const block = await this.provider.getBlock("latest");
         const feeData = await this.provider.getFeeData();
         if (!block?.baseFeePerGas || !feeData.maxPriorityFeePerGas) {
-            throw new Error("Network does not support EIP-1559");
+            throw new RPCError("Network does not support EIP-1559");
         }
         const base = block.baseFeePerGas;
         const priority = feeData.maxPriorityFeePerGas;
