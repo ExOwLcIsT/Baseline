@@ -4,15 +4,13 @@ import { CustomTransactionRequest } from "../core/BaseTypes/TransactionRequest";
 import TokenAmount from "../core/BaseTypes/TokenAmount";
 import { Address } from "../core/BaseTypes/Address";
 
-import { expect, test, describe, beforeEach } from "vitest";
+import { expect, test, describe, beforeEach, beforeAll } from "vitest";
 import * as secp from "@noble/secp256k1";
 import { createHash, createHmac } from "crypto";
 
 describe("WalletManager", () => {
   let walletManager: WalletManager;
-
-  beforeEach(() => {
-    // Hashes configuration
+  beforeAll(() => {
     secp.hashes.sha256 = (msg: Uint8Array) =>
       createHash("sha256").update(msg).digest();
 
@@ -21,6 +19,9 @@ describe("WalletManager", () => {
       for (const m of msgs) h.update(m);
       return h.digest();
     };
+  });
+  beforeEach(() => {
+    // Hashes configuration
     walletManager = WalletManager.generate();
   });
 

@@ -1,4 +1,3 @@
-import { serialize } from "node:v8";
 import { keccak_256 } from "@noble/hashes/sha3";
 import { bytesToHex } from "@noble/hashes/utils";
 class CanonicalSerializer {
@@ -12,10 +11,8 @@ class CanonicalSerializer {
       - Consistent unicode handling
       */
     static serialize(obj) {
-        // Внутрішня функція для рекурсивного сортування об'єктів
         function sortObject(value) {
             if (Array.isArray(value)) {
-                // Масиви залишаємо як є, але серіалізуємо елементи рекурсивно
                 return value.map(sortObject);
             }
             else if (value !== null && typeof value === "object") {
@@ -27,17 +24,15 @@ class CanonicalSerializer {
                 return sortedObj;
             }
             else {
-                // Прості значення повертаємо без змін
                 return value;
             }
         }
         const sorted = sortObject(obj);
-        const jsonStr = JSON.stringify(sorted); // JSON без пробілів
+        const jsonStr = JSON.stringify(sorted);
         return new TextEncoder().encode(jsonStr);
     }
     static hash(obj) {
-        // Returns keccak256 of canonical serialization.
-        const serialized = serialize(obj);
+        const serialized = this.serialize(obj);
         const hashed = keccak_256(serialized);
         return hashed;
     }

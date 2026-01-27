@@ -13,10 +13,8 @@ class CanonicalSerializer {
     */
 
   static serialize(obj: any): Uint8Array {
-  // Внутрішня функція для рекурсивного сортування об'єктів
   function sortObject(value: any): any {
     if (Array.isArray(value)) {
-      // Масиви залишаємо як є, але серіалізуємо елементи рекурсивно
       return value.map(sortObject);
     } else if (value !== null && typeof value === "object") {
       const sortedKeys = Object.keys(value).sort();
@@ -26,25 +24,23 @@ class CanonicalSerializer {
       }
       return sortedObj;
     } else {
-      // Прості значення повертаємо без змін
       return value;
     }
   }
 
   const sorted = sortObject(obj);
 
-  const jsonStr = JSON.stringify(sorted); // JSON без пробілів
+  const jsonStr = JSON.stringify(sorted); 
   return new TextEncoder().encode(jsonStr);
 }
 
   static hash(obj: any): Uint8Array {
-    // Returns keccak256 of canonical serialization.
     const serialized = this.serialize(obj);
     const hashed = keccak_256(serialized);
     return hashed;
   }
 
-  static verify_determinism(obj: any, iterations: number = 100): Boolean {
+  static verify_determinism(obj: any, iterations: number = 100): boolean {
     //Verifies serialization is deterministic over N iterations.
     const hashed = bytesToHex(this.hash(obj));
     for (let i = 0; i < iterations - 1; i++) {
