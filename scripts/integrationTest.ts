@@ -54,6 +54,5 @@ const signedTx = await wallet.signTransaction(tx);
 
 const txHash = await cc.sendTransaction(signedTx);
 
-const receipt = await cc.waitForReceipt(txHash);
+console.log("Transaction hash: " + txHash);
 
-console.log(receipt);

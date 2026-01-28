@@ -1,6 +1,32 @@
 #!/usr/bin/env node
 import process from "node:process";
 import ChainClient from "./ChainClient.js";
+import TokenAmount from "../core/BaseTypes/TokenAmount.js";
+import { AbiCoder, Contract, formatUnits } from "ethers";
+const coder = AbiCoder.defaultAbiCoder();
+const SELECTORS = {
+    "0xa9059cbb": "transfer(address,uint256)",
+    "0x23b872dd": "transferFrom(address,address,uint256)",
+    "0x095ea7b3": "approve(address,uint256)",
+    "0x70a08231": "balanceOf(address)",
+    "0x18160ddd": "totalSupply()",
+    "0xdd62ed3e": "allowance(address,address)",
+    "0x313ce567": "decimals()",
+    "0x06fdde03": "name()",
+    "0x95d89b41": "symbol()",
+    //Uniswap V2
+    "0x38ed1739": "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
+    "0x7ff36ab5": "swapExactETHForTokens(uint256,address[],address,uint256)",
+    "0x18cbafe5": "swapExactTokensForETH(uint256,uint256,address[],address,uint256)",
+    "0xfb3bdb41": "swapETHForExactTokens(uint256,address[],address,uint256)",
+    //Uniswap V3
+    "0x414bf389": "exactInputSingle((address,address,uint24,address,uint256,uint256,uint256,uint160))",
+    "0xc04b8d59": "exactInput((bytes,address,uint256,uint256,uint256))",
+    //TH
+    "0xd0e30db0": "deposit()",
+    "0x2e1a7d4d": "withdraw(uint256)",
+};
+const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55aeb";
 function parseArgs() {
     const [, , txHash, ...rest] = process.argv;
     if (!txHash) {
@@ -19,6 +45,65 @@ function parseArgs() {
     }
     return { txHash, rpc };
 }
+function decodeArgs(data) {
+    const selector = data.slice(0, 10);
+    const encoded = "0x" + data.slice(10);
+    try {
+        if (selector === "0x38ed1739") {
+            const [amountIn, amountOutMin, path, to, deadline] = coder.decode(["uint256", "uint256", "address[]", "address", "uint256"], encoded);
+            return { amountIn, amountOutMin, path, to, deadline };
+        }
+    }
+    catch { }
+    return null;
+}
+async function tokenMeta(provider, address) {
+    const erc20 = new Contract(address, [
+        "function symbol() view returns(string)",
+        "function decimals() view returns(uint8)",
+    ], provider);
+    return {
+        symbol: await erc20.symbol(),
+        decimals: await erc20.decimals(),
+    };
+}
+async function parseTransfers(provider, receipt) {
+    const transfers = [];
+    for (const log of receipt.logs) {
+        if (log.topics[0].toLowerCase() !== TRANSFER_TOPIC)
+            continue;
+        const token = log.address;
+        const from = "0x" + log.topics[1].slice(26);
+        const to = "0x" + log.topics[2].slice(26);
+        const amount = BigInt(log.data);
+        const meta = await tokenMeta(provider, token);
+        transfers.push({
+            token,
+            from,
+            to,
+            amount,
+            ...meta,
+        });
+    }
+    return transfers;
+}
+function buildSwapSummary(user, transfers) {
+    const sent = transfers.filter((t) => t.from.toLowerCase() === user.toLowerCase());
+    const received = transfers.filter((t) => t.to.toLowerCase() === user.toLowerCase());
+    if (!sent.length || !received.length)
+        return null;
+    const sell = sent[0];
+    const buy = received[received.length - 1];
+    const sellAmount = Number(formatUnits(sell.amount, sell.decimals));
+    const buyAmount = Number(formatUnits(buy.amount, buy.decimals));
+    return {
+        sell,
+        buy,
+        sellAmount,
+        buyAmount,
+        price: sellAmount / buyAmount,
+    };
+}
 async function main() {
     const { txHash, rpc } = parseArgs();
     const cc = new ChainClient(rpc);
@@ -31,10 +116,13 @@ async function main() {
     console.log("Block: " + block?.number);
     console.log("Timestamp: " + block?.date);
     console.log("Status: " + receipt?.status ? "success" : "failed");
-    console.log("\n".repeat(3));
+    console.log("\n");
     console.log("From: " + response?.from);
     console.log("To: " + response?.to);
-    console.log("Value: " + response?.value);
+    console.log("Value: " +
+        TokenAmount.fromRaw(response?.value ? response?.value : BigInt(0), 18, ".").toString() +
+        " ETH");
+    console.log("\n");
     console.log("Gas Analysis");
     console.log("-".repeat(10));
     console.log("Gas Limit: " + response?.gasLimit);
@@ -43,10 +131,45 @@ async function main() {
     const priorityFee = Number(receipt?.effectiveGasPrice) - Number(block?.baseFeePerGas);
     const transactionFee = Number(receipt?.effectiveGasPrice) - Number(block?.baseFeePerGas);
     console.log("Gas Used: " + receipt?.gasUsed + ` (${percentGasUsed})`);
-    console.log("Base Fee: " + block?.baseFeePerGas + "gwei");
-    console.log("Priority Fee: " + priorityFee + "gwei");
-    console.log("Effective Price: " + receipt?.effectiveGasPrice + "gwei");
+    console.log("Base Fee: " + block?.baseFeePerGas + " wei");
+    console.log("Priority Fee: " + priorityFee + " wei");
+    console.log("Effective Price: " + receipt?.effectiveGasPrice + " wei");
     console.log("Transaction Fee: ", transactionFee);
+    console.log("\n");
+    console.log("Function Called");
+    console.log("-".repeat(10));
+    if (response?.data === "0x") {
+        console.log("Simple transfer");
+    }
+    else {
+        const selector = response?.data.slice(0, 10);
+        console.log("Selector:", selector);
+        console.log("Signature:", SELECTORS[selector ?? ""] ?? "Unknown");
+        const decoded = decodeArgs(response?.data ?? "0x");
+        if (decoded) {
+            console.log("Arguments:");
+            console.log("  amountIn:", decoded.amountIn.toString());
+            console.log("  amountOutMin:", decoded.amountOutMin.toString());
+            console.log("  path:", decoded.path.join(" → "));
+            console.log("  to:", decoded.to);
+            console.log("  deadline:", decoded.deadline.toString());
+        }
+        const transfers = await parseTransfers(cc.provider, receipt);
+        console.log("\nToken Transfers");
+        console.log("-".repeat(20));
+        let i = 1;
+        for (const t of transfers) {
+            console.log(`${i++}. ${t.symbol}: ${t.from} → ${t.to} ${formatUnits(t.amount, t.decimals)}`);
+        }
+        const summary = buildSwapSummary(response?.from ?? "", transfers);
+        if (summary) {
+            console.log("\nSwap Summary");
+            console.log("-".repeat(20));
+            console.log(`Sold: ${summary.sellAmount} ${summary.sell.symbol}`);
+            console.log(`Received: ${summary.buyAmount} ${summary.buy.symbol}`);
+            console.log(`Execution Price: ${summary.price} ${summary.sell.symbol}/${summary.buy.symbol}`);
+        }
+    }
 }
 main().catch((e) => {
     console.error(e);

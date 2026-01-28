@@ -42,5 +42,4 @@ const estimatedGas = await cc.estimateGas(tx);
 console.log("Estimated gas: " + estimatedGas);
 const signedTx = await wallet.signTransaction(tx);
 const txHash = await cc.sendTransaction(signedTx);
-const receipt = await cc.waitForReceipt(txHash);
-console.log(receipt);
+console.log("Transaction hash: " + txHash);
