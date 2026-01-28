@@ -2,8 +2,6 @@
 import process from "node:process";
 import ChainClient from "./ChainClient.js";
 import TokenAmount from "../core/BaseTypes/TokenAmount.js";
-import { AbiCoder, Contract, formatUnits } from "ethers";
-const coder = AbiCoder.defaultAbiCoder();
 const SELECTORS = {
     "0xa9059cbb": "transfer(address,uint256)",
     "0x23b872dd": "transferFrom(address,address,uint256)",
@@ -26,7 +24,6 @@ const SELECTORS = {
     "0xd0e30db0": "deposit()",
     "0x2e1a7d4d": "withdraw(uint256)",
 };
-const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55aeb";
 function parseArgs() {
     const [, , txHash, ...rest] = process.argv;
     if (!txHash) {
@@ -44,65 +41,6 @@ function parseArgs() {
         rpc = process.env["INFURA_RPC_URL"];
     }
     return { txHash, rpc };
-}
-function decodeArgs(data) {
-    const selector = data.slice(0, 10);
-    const encoded = "0x" + data.slice(10);
-    try {
-        if (selector === "0x38ed1739") {
-            const [amountIn, amountOutMin, path, to, deadline] = coder.decode(["uint256", "uint256", "address[]", "address", "uint256"], encoded);
-            return { amountIn, amountOutMin, path, to, deadline };
-        }
-    }
-    catch { }
-    return null;
-}
-async function tokenMeta(provider, address) {
-    const erc20 = new Contract(address, [
-        "function symbol() view returns(string)",
-        "function decimals() view returns(uint8)",
-    ], provider);
-    return {
-        symbol: await erc20.symbol(),
-        decimals: await erc20.decimals(),
-    };
-}
-async function parseTransfers(provider, receipt) {
-    const transfers = [];
-    for (const log of receipt.logs) {
-        if (log.topics[0].toLowerCase() !== TRANSFER_TOPIC)
-            continue;
-        const token = log.address;
-        const from = "0x" + log.topics[1].slice(26);
-        const to = "0x" + log.topics[2].slice(26);
-        const amount = BigInt(log.data);
-        const meta = await tokenMeta(provider, token);
-        transfers.push({
-            token,
-            from,
-            to,
-            amount,
-            ...meta,
-        });
-    }
-    return transfers;
-}
-function buildSwapSummary(user, transfers) {
-    const sent = transfers.filter((t) => t.from.toLowerCase() === user.toLowerCase());
-    const received = transfers.filter((t) => t.to.toLowerCase() === user.toLowerCase());
-    if (!sent.length || !received.length)
-        return null;
-    const sell = sent[0];
-    const buy = received[received.length - 1];
-    const sellAmount = Number(formatUnits(sell.amount, sell.decimals));
-    const buyAmount = Number(formatUnits(buy.amount, buy.decimals));
-    return {
-        sell,
-        buy,
-        sellAmount,
-        buyAmount,
-        price: sellAmount / buyAmount,
-    };
 }
 async function main() {
     const { txHash, rpc } = parseArgs();
@@ -145,31 +83,8 @@ async function main() {
         const selector = response?.data.slice(0, 10);
         console.log("Selector:", selector);
         console.log("Signature:", SELECTORS[selector ?? ""] ?? "Unknown");
-        const decoded = decodeArgs(response?.data ?? "0x");
-        if (decoded) {
-            console.log("Arguments:");
-            console.log("  amountIn:", decoded.amountIn.toString());
-            console.log("  amountOutMin:", decoded.amountOutMin.toString());
-            console.log("  path:", decoded.path.join(" → "));
-            console.log("  to:", decoded.to);
-            console.log("  deadline:", decoded.deadline.toString());
-        }
-        const transfers = await parseTransfers(cc.provider, receipt);
-        console.log("\nToken Transfers");
-        console.log("-".repeat(20));
-        let i = 1;
-        for (const t of transfers) {
-            console.log(`${i++}. ${t.symbol}: ${t.from} → ${t.to} ${formatUnits(t.amount, t.decimals)}`);
-        }
-        const summary = buildSwapSummary(response?.from ?? "", transfers);
-        if (summary) {
-            console.log("\nSwap Summary");
-            console.log("-".repeat(20));
-            console.log(`Sold: ${summary.sellAmount} ${summary.sell.symbol}`);
-            console.log(`Received: ${summary.buyAmount} ${summary.buy.symbol}`);
-            console.log(`Execution Price: ${summary.price} ${summary.sell.symbol}/${summary.buy.symbol}`);
-        }
     }
+    console.log(receipt);
 }
 main().catch((e) => {
     console.error(e);

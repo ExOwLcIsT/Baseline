@@ -11,6 +11,6 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src", "core", "chain", "scripts"],
+  "include": ["src", "core", "chain", "scripts", "pricing"],
   "exclude": ["node_modules", "dist"]
 }
