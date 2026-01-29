@@ -6,6 +6,7 @@ import UniswapV2Pair from "../pricing/AMM.js";
 import { Address } from "../core/BaseTypes/Address.js";
 import Token from "../pricing/Token.js";
 import ChainClient from "../chain/ChainClient.js";
+import Route from "../pricing/Route.js";
 
 dotenv.config();
 
@@ -32,21 +33,35 @@ const cc = new ChainClient();
 // console.log(nonce);
 const USDCToken = new Token("USDC", BigInt(Math.pow(10, 6)));
 const ETHToken = new Token("ETH", BigInt(Math.pow(10, 18)));
+const USDToken = new Token("USDT", BigInt(Math.pow(10, 6)));
 const uni = new UniswapV2Pair(
   ETHToken,
   USDCToken,
-  BigInt(207_224_038_083_152_540_000),
-  BigInt(1_821_582_150_212),
-  Address.fromString(wallet.address),
+  BigInt(1000 * 10 ** 18),
+  BigInt(2000000 * 10 ** 6),
 );
-console.log(uni.getAmountOut(10_000, USDCToken));
-console.log(uni.getAmountIn(BigInt(4960273038901078125n), ETHToken));
-console.log(uni.getSpotPrice(USDCToken));
-console.log(uni.getExecutionPrice(10_000, USDCToken));
-console.log(uni.getPriceImpact(10_000, USDCToken));
-
-console.log(uni.simulateSwap(10_000, USDCToken));
+const uni1 = new UniswapV2Pair(
+  USDCToken,
+  USDToken,
+  BigInt(2000000 * 10 ** 6),
+  BigInt(2000000 * 10 ** 6),
+);
 console.log(
+  "Amount out for 10_000 USDC: " + uni.getAmountOut(10_000, USDCToken) + " wei",
+);
+console.log(
+  "Amount in for 1128017927007915696 wei: " +
+    uni.getAmountIn(BigInt(1128017927007915696n), ETHToken),
+);
+console.log("Spot price of USDC: " + uni.getSpotPrice(USDCToken));
+console.log(
+  "Execution price of USDC: " + uni.getExecutionPrice(10_000, USDCToken),
+);
+console.log("Price impact: " + uni.getPriceImpact(10_000, USDCToken) + "%");
+
+console.log("Simulated swap: ", uni.simulateSwap(10_000, USDCToken));
+console.log(
+  "From chain ",
   await UniswapV2Pair.fromChain(
     Address.fromString("0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"),
     cc,
@@ -56,3 +71,7 @@ console.log(
 // const price_impact_analyzer = new PriceImpactAnalyzer(uni);
 
 // console.log(price_impact_analyzer.generateImpactTable("ETH", [1,2,3,4,5]))
+
+const route = new Route([uni, uni1], [ETHToken, USDCToken, USDToken]);
+console.log(route.getOutput(1));
+console.log(route.getIntermediateAmounts(1));

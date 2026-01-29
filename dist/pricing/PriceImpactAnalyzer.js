@@ -59,6 +59,61 @@ class PriceImpactAnalyzer {
         }
         return rows;
     }
+    findMaxSizeForImpact(tokenIn, maxImpactPct) {
+        /*
+          Binary search to find largest trade with impact <= max_impact_pct.
+          */
+        const maxValue = Number(this.pair.token0.equals(tokenIn)
+            ? this.pair.reserve0
+            : this.pair.reserve1) / Number(tokenIn.decimals);
+        return this.findMaxSizeForImpactRecursion(tokenIn, maxImpactPct, 0, maxValue);
+    }
+    findMaxSizeForImpactRecursion(tokenIn, maxImpactPct, min, max) {
+        const value = (max + min) / 2;
+        const priceImpact = this.pair.getPriceImpact(value, tokenIn);
+        if (max === min)
+            return value;
+        if (priceImpact > maxImpactPct)
+            return this.findMaxSizeForImpactRecursion(tokenIn, maxImpactPct, min, value);
+        if (priceImpact < maxImpactPct) {
+            return this.findMaxSizeForImpactRecursion(tokenIn, maxImpactPct, value, max);
+        }
+        return value;
+    }
+    estimateTrueCost(amountIn, // human units of tokenIn
+    tokenIn, gasPriceGwei, // gas price in gwei
+    gasEstimate = 150_000) {
+        const tokenOut = tokenIn.equals(this.pair.token0)
+            ? this.pair.token1
+            : this.pair.token0;
+        // Calculate gross output from swap
+        const grossOutRaw = this.pair.getAmountOut(amountIn, tokenIn);
+        // Gas cost in ETH
+        const gasCostEth = (gasEstimate * gasPriceGwei) / 1e9;
+        // Convert gas cost to output token units via spot price
+        const spotPrice = this.pair.getSpotPrice(tokenIn); // tokenIn/tokenOut
+        let gasCostInOutputToken;
+        if (tokenOut.name === "ETH") {
+            gasCostInOutputToken = gasCostEth;
+        }
+        else if (tokenIn.name === "ETH") {
+            // Swap input ETH → output token
+            gasCostInOutputToken = gasCostEth * spotPrice;
+        }
+        else {
+            // Neither token is ETH, approximate via ETH as intermediate
+            gasCostInOutputToken = gasCostEth * spotPrice; // rough estimate
+        }
+        const netOutput = Number(grossOutRaw) / Number(tokenOut.decimals) - gasCostInOutputToken;
+        const effectivePrice = amountIn / netOutput;
+        return {
+            grossOutput: grossOutRaw,
+            gasCostEth,
+            gasCostInOutputToken,
+            netOutput,
+            effectivePrice,
+        };
+    }
 }
 async function main() {
     dotenv.config();
@@ -131,11 +186,8 @@ node impact_analyzer.js <pair_address> --token-in=USDC --sizes=1000,10000,100000
     /* =========================================================
        Extra info
     ========================================================= */
-    //TODO
-    //const max = analyzer.findMaxSizeForImpact(tokenIn, 1);
-    //   console.log(
-    //     `\nMax trade for 1% impact: ${format(Number(max))} ${tokenIn.name}\n`,
-    //   );
+    const max = analyzer.findMaxSizeForImpact(tokenIn, 1);
+    console.log(`\nMax trade for 1% impact: ${format(Number(max))} ${tokenIn.name}\n`);
 }
 /* ========================================================= */
 main().catch((err) => {

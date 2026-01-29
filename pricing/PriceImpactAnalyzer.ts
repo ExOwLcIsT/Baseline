@@ -73,35 +73,93 @@ class PriceImpactAnalyzer {
     return rows;
   }
 
-  // def find_max_size_for_impact(
-  //     self,
-  //     token_in: Token,
-  //     max_impact_pct: Decimal
-  // ) -> int:
-  //     """
-  //     Binary search to find largest trade with impact <= max_impact_pct.
-  //     """
-  //     ...
+  findMaxSizeForImpact(tokenIn: Token, maxImpactPct: number): number {
+    /*
+      Binary search to find largest trade with impact <= max_impact_pct.
+      */
+    const maxValue =
+      Number(
+        this.pair.token0.equals(tokenIn)
+          ? this.pair.reserve0
+          : this.pair.reserve1,
+      ) / Number(tokenIn.decimals);
+    return this.findMaxSizeForImpactRecursion(
+      tokenIn,
+      maxImpactPct,
+      0,
+      maxValue,
+    );
+  }
+  findMaxSizeForImpactRecursion(
+    tokenIn: Token,
+    maxImpactPct: number,
+    min: number,
+    max: number,
+  ): number {
+    const value = (max + min) / 2;
+    const priceImpact = this.pair.getPriceImpact(value, tokenIn);
 
-  // def estimate_true_cost(
-  //     self,
-  //     amount_in: int,
-  //     token_in: Token,
-  //     gas_price_gwei: int,
-  //     gas_estimate: int = 150000
-  // ) -> dict:
-  //     """
-  //     Returns total cost including gas:
-  //     {
-  //         'gross_output': int,
-  //         'gas_cost_eth': int,
-  //         'gas_cost_in_output_token': int,
-  //         'net_output': int,
-  //         'effective_price': Decimal,
-  //     }
-  //     """
-  //     ...
-  // }
+    if (max === min) return value;
+    if (priceImpact > maxImpactPct)
+      return this.findMaxSizeForImpactRecursion(
+        tokenIn,
+        maxImpactPct,
+        min,
+        value,
+      );
+    if (priceImpact < maxImpactPct) {
+      return this.findMaxSizeForImpactRecursion(
+        tokenIn,
+        maxImpactPct,
+        value,
+        max,
+      );
+    }
+    return value;
+  }
+  estimateTrueCost(
+    amountIn: number, // human units of tokenIn
+    tokenIn: Token,
+    gasPriceGwei: number, // gas price in gwei
+    gasEstimate: number = 150_000, // gas units
+  ) {
+    const tokenOut = tokenIn.equals(this.pair.token0)
+      ? this.pair.token1
+      : this.pair.token0;
+
+    // Calculate gross output from swap
+    const grossOutRaw: bigint = this.pair.getAmountOut(amountIn, tokenIn);
+
+    // Gas cost in ETH
+    const gasCostEth: number = (gasEstimate * gasPriceGwei) / 1e9;
+
+    // Convert gas cost to output token units via spot price
+    const spotPrice: number = this.pair.getSpotPrice(tokenIn); // tokenIn/tokenOut
+    let gasCostInOutputToken: number;
+
+    if (tokenOut.name === "ETH") {
+      gasCostInOutputToken = gasCostEth;
+    } else if (tokenIn.name === "ETH") {
+      // Swap input ETH → output token
+      gasCostInOutputToken = gasCostEth * spotPrice;
+    } else {
+      // Neither token is ETH, approximate via ETH as intermediate
+      gasCostInOutputToken = gasCostEth * spotPrice; // rough estimate
+    }
+
+    const netOutput =
+      Number(grossOutRaw) / Number(tokenOut.decimals) - gasCostInOutputToken;
+
+    const effectivePrice = amountIn / netOutput;
+
+    return {
+      grossOutput: grossOutRaw,
+      gasCostEth,
+      gasCostInOutputToken,
+      netOutput,
+      effectivePrice,
+    };
+  }
 }
 
 async function main() {
@@ -227,12 +285,11 @@ node impact_analyzer.js <pair_address> --token-in=USDC --sizes=1000,10000,100000
   /* =========================================================
      Extra info
   ========================================================= */
-  //TODO
-  //const max = analyzer.findMaxSizeForImpact(tokenIn, 1);
+  const max = analyzer.findMaxSizeForImpact(tokenIn, 1);
 
-  //   console.log(
-  //     `\nMax trade for 1% impact: ${format(Number(max))} ${tokenIn.name}\n`,
-  //   );
+  console.log(
+    `\nMax trade for 1% impact: ${format(Number(max))} ${tokenIn.name}\n`,
+  );
 }
 
 /* ========================================================= */

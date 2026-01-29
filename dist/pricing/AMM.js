@@ -54,15 +54,17 @@ class UniswapV2Pair {
             throw new Error("Invalid token");
         const direction = tokenOut.name === this.token0.name;
         //Reserve that is increased (with counted fee)
-        const reserveIn = direction ? this.reserve1 : this.reserve0;
+        const reserveIn = direction
+            ? Number(this.reserve1) / Number(this.token1.decimals)
+            : Number(this.reserve0) / Number(this.token0.decimals);
         //Reserve that is decreased
-        const reserveOut = direction ? this.reserve0 : this.reserve1;
-        const numenator = BigInt(Number(reserveIn) * 10000) * amountOut;
-        const denumenator = reserveOut - amountOut;
+        const reserveOut = direction
+            ? Number(this.reserve0 - amountOut) / Number(this.token0.decimals)
+            : Number(this.reserve1 - amountOut) / Number(this.token1.decimals);
+        const numenator = (reserveIn * 10000 * Number(amountOut)) / Number(tokenOut.decimals);
+        const denumenator = reserveOut;
         const amountInWithFee = numenator / denumenator;
-        const amountIn = Number(amountInWithFee) /
-            (10000 - this.feeBPS) /
-            Number(direction ? this.token1.decimals : this.token0.decimals);
+        const amountIn = amountInWithFee / (10000 - this.feeBPS);
         return Math.ceil(amountIn);
     }
     getSpotPrice(tokenIn) {
@@ -72,12 +74,12 @@ class UniswapV2Pair {
         if (!tokenIn.equals(this.token0) && !tokenIn.equals(this.token1))
             throw new Error("Invalid token");
         const direction = tokenIn.name === this.token0.name;
-        const num = Number(direction
-            ? this.reserve0 / this.token0.decimals
-            : this.reserve1 / this.token1.decimals);
-        const denum = Number(direction
-            ? this.reserve1 / this.token1.decimals
-            : this.reserve0 / this.token0.decimals);
+        const num = direction
+            ? Number(this.reserve0) / Number(this.token0.decimals)
+            : Number(this.reserve1) / Number(this.token1.decimals);
+        const denum = direction
+            ? Number(this.reserve1) / Number(this.token1.decimals)
+            : Number(this.reserve0) / Number(this.token0.decimals);
         return num / denum;
     }
     getExecutionPrice(amountIn, tokenIn) {
@@ -86,8 +88,6 @@ class UniswapV2Pair {
           */
         if (!tokenIn.equals(this.token0) && !tokenIn.equals(this.token1))
             throw new Error("Invalid token");
-        // console.log(
-        // );
         const amountOut = Number(this.getAmountOut(amountIn, tokenIn)) /
             Number(tokenIn.name === this.token0.name
                 ? this.token1.decimals
