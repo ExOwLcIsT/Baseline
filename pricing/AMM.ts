@@ -1,14 +1,14 @@
 import ChainClient from "../chain/ChainClient.js";
 import { Address } from "../core/BaseTypes/Address.js";
-import { Token } from "./Token.js";
+import Token from "./Token.js";
 
-export class UniswapV2Pair {
+class UniswapV2Pair {
   /*
     Represents a Uniswap V2 liquidity pair.
     All math uses integers only — no floats anywhere.
     */
 
-  address: Address;
+  address?: Address;
   token0: Token;
   token1: Token;
   reserve0: bigint;
@@ -16,27 +16,27 @@ export class UniswapV2Pair {
   feeBPS: number;
 
   constructor(
-    address: Address,
     token0: Token,
     token1: Token,
     reserve0: bigint,
     reserve1: bigint,
-    feeBPS: number = 30, // 0.30% = 30 basis points
+    address?: Address, // 0.30% = 30 basis points
+    feeBPS: number = 30,
   ) {
     this.address = address;
     this.token0 = token0;
     this.token1 = token1;
-    this.reserve0 = reserve0 * token0.decimals;
-    this.reserve1 = reserve1 * token1.decimals;
+    this.reserve0 = reserve0;
+    this.reserve1 = reserve1;
     this.feeBPS = feeBPS;
   }
   copy(): UniswapV2Pair {
     return new UniswapV2Pair(
-      this.address,
       this.token0,
       this.token1,
       this.reserve0,
       this.reserve1,
+      this.address,
     );
   }
   getAmountOut(amountIn: number, tokenIn: Token): bigint {
@@ -53,9 +53,9 @@ export class UniswapV2Pair {
       throw new Error("Invalid token");
 
     const direction = tokenIn.name === this.token0.name;
-
-    const amountInWithFee =
-      BigInt(amountIn * (10000 - this.feeBPS)) * tokenIn.decimals;
+    const amountInWithFee = BigInt(
+      amountIn * (10000 - this.feeBPS) * Number(tokenIn.decimals),
+    );
     //Reserve that is increased (with counted fee)
     const reserveIn = direction ? this.reserve0 : this.reserve1;
     //Reserve that is decreased
@@ -120,6 +120,8 @@ export class UniswapV2Pair {
       */
     if (!tokenIn.equals(this.token0) && !tokenIn.equals(this.token1))
       throw new Error("Invalid token");
+    // console.log(
+    // );
     const amountOut =
       Number(this.getAmountOut(amountIn, tokenIn)) /
       Number(
@@ -139,7 +141,7 @@ export class UniswapV2Pair {
       throw new Error("Invalid token");
     const spotPrice = this.getSpotPrice(tokenIn);
     const executionPrice = this.getExecutionPrice(amountIn, tokenIn);
-    return ((executionPrice - spotPrice) / spotPrice) * 100;
+    return Math.round(((executionPrice - spotPrice) / spotPrice) * 10000) / 100;
   }
 
   simulateSwap(amountIn: number, tokenIn: Token): UniswapV2Pair {
@@ -163,10 +165,66 @@ export class UniswapV2Pair {
     return copy;
   }
 
-//   static fromChain(address: Address, client: ChainClient): UniswapV2Pair {
-//     /*
-//       Fetch pair data from on-chain.
-//       */
-//      client.
-//   }
+  static async fromChain(
+    address: Address,
+    client: ChainClient,
+  ): Promise<UniswapV2Pair> {
+    const { Contract } = await import("ethers");
+
+    const pairAbi = [
+      "function token0() view returns (address)",
+      "function token1() view returns (address)",
+      "function getReserves() view returns (uint112,uint112,uint32)",
+    ];
+
+    const erc20Abi = [
+      "function name() view returns (string)",
+      "function symbol() view returns (string)",
+      "function decimals() view returns (uint8)",
+    ];
+
+    const pair = new Contract(address.lower, pairAbi, client.provider);
+
+    // -------------------
+    // fetch pair data
+    // -------------------
+    const [addr0, addr1, reserves] = await Promise.all([
+      pair.token0(),
+      pair.token1(),
+      pair.getReserves(),
+    ]);
+
+    const reserve0 = BigInt(reserves[0]);
+    const reserve1 = BigInt(reserves[1]);
+
+    // -------------------
+    // fetch token metadata
+    // -------------------
+    const token0Contract = new Contract(addr0, erc20Abi, client.provider);
+    const token1Contract = new Contract(addr1, erc20Abi, client.provider);
+
+    const [name0, symbol0, decimals0, name1, symbol1, decimals1] =
+      await Promise.all([
+        token0Contract.name(),
+        token0Contract.symbol(),
+        token0Contract.decimals(),
+
+        token1Contract.name(),
+        token1Contract.symbol(),
+        token1Contract.decimals(),
+      ]);
+
+    // -------------------
+    // build tokens
+    // -------------------
+    const token0 = new Token(symbol0, BigInt(10) * BigInt(decimals0));
+
+    const token1 = new Token(symbol1, BigInt(10) * BigInt(decimals1));
+    // -------------------
+    // return pair
+    // -------------------
+    return new UniswapV2Pair(token0, token1, reserve0, reserve1, address);
+  }
 }
+
+export default UniswapV2Pair;

@@ -1,4 +1,4 @@
-export class Token {
+class Token {
     name;
     decimals;
     constructor(name, decimals) {
@@ -11,3 +11,4 @@ export class Token {
         return false;
     }
 }
+export default Token;

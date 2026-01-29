@@ -1,4 +1,4 @@
-export class Token {
+class Token {
   name: string;
   decimals: bigint;
 
@@ -13,3 +13,4 @@ export class Token {
     return false;
   }
 }
+export default Token;
