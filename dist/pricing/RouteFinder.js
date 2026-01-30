@@ -1,4 +1,5 @@
 import Route from "./Route.js";
+import Token from "./Token.js";
 class RouteFinder {
     // Finds optimal routes between tokens.
     pools;
@@ -50,6 +51,18 @@ class RouteFinder {
         dfs(tokenIn, new Set([tokenIn.name]), [], [tokenIn], maxHops);
         return routes;
     }
+    convertToOutputToken(gasWei, tokenOut) {
+        if (tokenOut.name === "ETH")
+            return gasWei;
+        const pool = this.pools.find((p) => (p.token0.name === "ETH" && p.token1.equals(tokenOut)) ||
+            (p.token1.name === "ETH" && p.token0.equals(tokenOut)));
+        if (!pool) {
+            throw new Error("No ETH→tokenOut pool for gas conversion");
+        }
+        const ethToken = new Token("ETH", 10n ** 18n);
+        // simulate swap of gasWei ETH → tokenOut
+        return pool.getAmountOut(Number(gasWei) / Number(ethToken.decimals), ethToken);
+    }
     findBestRoute(tokenIn, tokenOut, amountIn, gasPriceGwei, maxHops = 3) {
         /*
             Find route that maximizes NET output (after gas).
@@ -60,8 +73,11 @@ class RouteFinder {
         let bestNetOutput = BigInt(0);
         routes.forEach((route) => {
             const grossOutput = route.getOutput(amountIn);
-            const gasCost = route.estimateGas() * gasPriceGwei;
-            const netOutput = grossOutput - gasCost;
+            const gasCost = route.estimateGas() * gasPriceGwei * BigInt(1000000000);
+            const gasCostInOutputToken = this.convertToOutputToken(gasCost, tokenOut);
+            const netOutput = grossOutput - gasCostInOutputToken;
+            console.log(route);
+            console.log(grossOutput - gasCostInOutputToken);
             if (netOutput > bestNetOutput) {
                 bestNetOutput = netOutput;
                 bestRoute = route;

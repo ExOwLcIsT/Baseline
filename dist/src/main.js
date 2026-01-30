@@ -6,7 +6,7 @@ import UniswapV2Pair from "../pricing/AMM.js";
 import { Address } from "../core/BaseTypes/Address.js";
 import Token from "../pricing/Token.js";
 import ChainClient from "../chain/ChainClient.js";
-import Route from "../pricing/Route.js";
+import MempoolMonitor from "../pricing/MempoolMonitor.js";
 dotenv.config();
 // Hashes configuration
 secp.hashes.sha256 = (msg) => createHash("sha256").update(msg).digest();
@@ -38,6 +38,13 @@ console.log("Simulated swap: ", uni.simulateSwap(10_000, USDCToken));
 console.log("From chain ", await UniswapV2Pair.fromChain(Address.fromString("0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"), cc));
 // const price_impact_analyzer = new PriceImpactAnalyzer(uni);
 // console.log(price_impact_analyzer.generateImpactTable("ETH", [1,2,3,4,5]))
-const route = new Route([uni, uni1], [ETHToken, USDCToken, USDToken]);
-console.log(route.getOutput(1));
-console.log(route.getIntermediateAmounts(1));
+// const route = new Route([uni, uni1], [ETHToken, USDCToken, USDToken]);
+// console.log(route.getOutput(1));
+// console.log(route.getIntermediateAmounts(1));
+const monitor = new MempoolMonitor(process.env.INFURA_WS_RPC, (swap) => {
+    console.log("Swap detected:", swap);
+    console.log(`Detected swap: ${swap.dex} ${swap.method}`);
+    console.log(`${swap.amountIn} → min ${swap.minAmountOut}`);
+    console.log(` Slippage tolerance: ${swap.slippageTolerance}`);
+});
+await monitor.start();

@@ -14,11 +14,6 @@ class RouteFinder {
     this.graph = this.buildGraph();
   }
 
-  /* =========================================================
-     Graph builder
-     token → [(pool, otherToken)]
-  ========================================================= */
-
   buildGraph(): Map<string, Array<{ pool: UniswapV2Pair; token: Token }>> {
     const g = new Map<string, Array<{ pool: UniswapV2Pair; token: Token }>>();
 
@@ -77,7 +72,27 @@ class RouteFinder {
 
     return routes;
   }
+  convertToOutputToken(gasWei: bigint, tokenOut: Token): bigint {
+    if (tokenOut.name === "ETH") return gasWei;
 
+    const pool = this.pools.find(
+      (p) =>
+        (p.token0.name === "ETH" && p.token1.equals(tokenOut)) ||
+        (p.token1.name === "ETH" && p.token0.equals(tokenOut)),
+    );
+
+    if (!pool) {
+      throw new Error("No ETH→tokenOut pool for gas conversion");
+    }
+
+    const ethToken = new Token("ETH", 10n ** 18n);
+
+    // simulate swap of gasWei ETH → tokenOut
+    return pool.getAmountOut(
+      Number(gasWei) / Number(ethToken.decimals),
+      ethToken,
+    );
+  }
   findBestRoute(
     tokenIn: Token,
     tokenOut: Token,
@@ -96,9 +111,11 @@ class RouteFinder {
 
     routes.forEach((route) => {
       const grossOutput = route.getOutput(amountIn);
-      const gasCost = route.estimateGas() * gasPriceGwei;
-      const netOutput = grossOutput - gasCost;
-
+      const gasCost = route.estimateGas() * gasPriceGwei * BigInt(1000000000);
+      const gasCostInOutputToken = this.convertToOutputToken(gasCost, tokenOut);
+      const netOutput = grossOutput - gasCostInOutputToken;
+      console.log(route);
+      console.log(grossOutput - gasCostInOutputToken);
       if (netOutput > bestNetOutput) {
         bestNetOutput = netOutput;
         bestRoute = route;
@@ -130,7 +147,7 @@ class RouteFinder {
     for (const route of routes) {
       const gross = route.getOutput(amountIn);
       const gasEstimate = route.estimateGas();
-      const gasCostWei = gasEstimate * BigInt(gasPriceGwei) * 1_000_000_000n;
+      const gasCostWei = gasEstimate * gasPriceGwei * 1_000_000_000n;
 
       const net = gross - gasCostWei;
 

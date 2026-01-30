@@ -18,7 +18,7 @@ class Route {
                 Number(this.pools[i].getAmountOut(amountIn, this.path[i])) /
                     Number(this.path[i + 1].decimals);
         }
-        const amountOut = this.pools[this.hops - 1].getAmountOut(amountIn, this.path[this.hops]);
+        const amountOut = this.pools[this.hops - 1].getAmountOut(amountIn, this.path[this.hops - 1]);
         return amountOut;
     }
     getIntermediateAmounts(amountIn) {

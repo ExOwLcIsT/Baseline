@@ -35,7 +35,7 @@ class UniswapV2Pair {
         if (!tokenIn.equals(this.token0) && !tokenIn.equals(this.token1))
             throw new Error("Invalid token");
         const direction = tokenIn.name === this.token0.name;
-        const amountInWithFee = BigInt(amountIn * (10000 - this.feeBPS) * Number(tokenIn.decimals));
+        const amountInWithFee = BigInt(amountIn * Number(tokenIn.decimals) * (10000 - this.feeBPS));
         //Reserve that is increased (with counted fee)
         const reserveIn = direction ? this.reserve0 : this.reserve1;
         //Reserve that is decreased
@@ -164,12 +164,15 @@ class UniswapV2Pair {
         // -------------------
         // build tokens
         // -------------------
-        const token0 = new Token(symbol0, BigInt(10) * BigInt(decimals0));
-        const token1 = new Token(symbol1, BigInt(10) * BigInt(decimals1));
+        const token0 = new Token(symbol0, BigInt(10) * BigInt(decimals0), addr0);
+        const token1 = new Token(symbol1, BigInt(10) * BigInt(decimals1), addr1);
         // -------------------
         // return pair
         // -------------------
         return new UniswapV2Pair(token0, token1, reserve0, reserve1, address);
+    }
+    refreshReserves(client) {
+        return UniswapV2Pair.fromChain(this.address, client);
     }
 }
 export default UniswapV2Pair;

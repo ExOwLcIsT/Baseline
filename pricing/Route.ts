@@ -3,8 +3,8 @@ import Token from "./Token.js";
 
 class Route {
   // Represents a swap route through one or more pools.
-  private readonly pools: UniswapV2Pair[];
-  private readonly path: Token[];
+  readonly pools: UniswapV2Pair[];
+  readonly path: Token[];
   constructor(pools: UniswapV2Pair[], path: Token[]) {
     if (pools.length !== path.length - 1)
       throw new Error("Count of tokens must be pools + 1");
@@ -24,7 +24,7 @@ class Route {
     }
     const amountOut = this.pools[this.hops - 1].getAmountOut(
       amountIn,
-      this.path[this.hops],
+      this.path[this.hops - 1],
     );
     return amountOut;
   }
