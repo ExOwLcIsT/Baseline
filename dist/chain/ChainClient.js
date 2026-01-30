@@ -37,7 +37,6 @@ class ChainClient {
     }
     async getBalance(address) {
         const balance = await this.provider.getBalance(address.lower);
-        console.log(balance);
         return TokenAmount.fromRaw(balance, 18, ",");
     }
     async getNonce(address, block = "pending") {

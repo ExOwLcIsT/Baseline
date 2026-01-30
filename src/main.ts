@@ -6,9 +6,8 @@ import UniswapV2Pair from "../pricing/AMM.js";
 import { Address } from "../core/BaseTypes/Address.js";
 import Token from "../pricing/Token.js";
 import ChainClient from "../chain/ChainClient.js";
-import MempoolMonitor from "../pricing/MempoolMonitor.js";
 import Route from "../pricing/Route.js";
-import PriceImpactAnalyzer from "../pricing/PriceImpactAnalyzer.js";
+import PricingEngine from "../pricing/PricingEngine.js";
 
 dotenv.config();
 
@@ -70,19 +69,26 @@ console.log(
   ),
 );
 
-const price_impact_analyzer = new PriceImpactAnalyzer(uni);
+//const price_impact_analyzer = new PriceImpactAnalyzer(uni);
 
-console.log(price_impact_analyzer.generateImpactTable("ETH", [1, 2, 3, 4, 5]));
+//console.log(price_impact_analyzer.generateImpactTable("ETH", [1, 2, 3, 4, 5]));
 
 const route = new Route([uni, uni1], [ETHToken, USDCToken, USDToken]);
 console.log(route.getOutput(1));
 console.log(route.getIntermediateAmounts(1));
 
-const monitor = new MempoolMonitor(process.env.INFURA_WS_RPC!, (swap) => {
-  console.log("Swap detected:", swap);
-  console.log(`Detected swap: ${swap.dex} ${swap.method}`);
-  console.log(`${swap.amountIn} → min ${swap.minAmountOut}`);
-  console.log(` Slippage tolerance: ${swap.slippageTolerance}`);
-});
+// const monitor = new MempoolMonitor(process.env.INFURA_WS_RPC!, (swap) => {
+//   console.log("Swap detected:", swap);
+//   console.log(`Detected swap: ${swap.dex} ${swap.method}`);
+//   console.log(`${swap.amountIn} → min ${swap.minAmountOut}`);
+//   console.log(` Slippage tolerance: ${swap.slippageTolerance}`);
+// });
 
-await monitor.start();
+// await monitor.start();
+
+const engine = new PricingEngine(
+  cc,
+  process.env["INFURA_RPC_URL"]!,
+  process.env["INFURA_WS_RPC"]!,
+);
+engine.monitor.start();

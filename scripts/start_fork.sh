@@ -3,10 +3,12 @@
 
 # Requires: anvil (from foundry)
 # Install: curl -L <https://foundry.paradigm.xyz> | bash && foundryup
-
-anvil \\
-    --fork-url $ETH_RPC_URL \\
-    --fork-block-number latest \\
-    --port 8545 \\
-    --accounts 10 \\
+set -a
+source .env
+set +a
+anvil \
+    --fork-url "$INFURA_RPC_URL" \
+    --fork-block-number 24346754 \
+    --port 8545 \
+    --accounts 10 \
     --balance 10000

@@ -42,7 +42,6 @@ class ChainClient {
 
   async getBalance(address: Address): Promise<TokenAmount> {
     const balance = await this.provider.getBalance(address.lower);
-    console.log(balance);
     return TokenAmount.fromRaw(balance, 18, ",");
   }
 

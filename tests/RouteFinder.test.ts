@@ -94,7 +94,6 @@ describe("RouteFinder", () => {
 
     const routeOut = route.getOutput(amountIn);
     const out1 = p1.getAmountOut(amountIn, SHIB);
-    console.log("Out1: " + Number(out1) / Number(ETH.decimals));
     const out2 = p2.getAmountOut(Number(out1) / Number(ETH.decimals), ETH);
 
     expect(routeOut).toEqual(out2);

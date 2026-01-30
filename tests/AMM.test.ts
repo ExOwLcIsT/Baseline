@@ -26,22 +26,22 @@ describe("AMM", () => {
   test("amountOut matches solidity", () => {
     // Compare against known on-chain result
     // Uses a real historical swap and verifies the same output
-    // 0x0e793ea99cbfbceeca7c784a708080e51974846cfa166f9af5fbc4f3c597f0f4
+    // https://etherscan.io/tx/0xdbdc09b49eaaeb155bb8ecb6512c01f31b21f88ecc7af1205cf07bf459b44b5d
     const pair = new UniswapV2Pair(
       ETHToken,
       USDCToken,
-      BigInt(995 * 10 ** 18),
-      BigInt(2_995_000 * 10 ** 6),
+      BigInt(3861.69752193 * 10 ** 18),
+      BigInt(10561414.261179 * 10 ** 6),
     );
 
-    const ethIn = 0.03388697;
+    const ethIn = 0.07290358122491630;
     const usdcOut = pair.getAmountOut(ethIn, ETHToken);
-
+  
     // Should get slightly less than 1 ETH due to fee + impact
-    expect(usdcOut).toBeLessThan(102 * 10 ** 6);
-    expect(usdcOut).toBeGreaterThan(99 * 10 ** 6);
+    expect(usdcOut).toBeLessThan(199 * 10 ** 6);
+    expect(usdcOut).toBeGreaterThanOrEqual(198.783196 * 10 ** 6);
   });
-  test("test_integer_math_no_floats", () => {
+  test("test integer math no floats", () => {
     // Verify no floating point used
     // Large numbers that would lose precision with float
     const pair = new UniswapV2Pair(
