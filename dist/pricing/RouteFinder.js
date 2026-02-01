@@ -1,3 +1,4 @@
+import { Address } from "../core/BaseTypes/Address.js";
 import Route from "./Route.js";
 import Token from "./Token.js";
 class RouteFinder {
@@ -59,9 +60,9 @@ class RouteFinder {
         if (!pool) {
             throw new Error("No ETH→tokenOut pool for gas conversion");
         }
-        const ethToken = new Token("ETH", 10n ** 18n);
+        const ethToken = new Token("ETH", 10n ** 18n, Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"));
         // simulate swap of gasWei ETH → tokenOut
-        return pool.getAmountOut(Number(gasWei) / Number(ethToken.decimals), ethToken);
+        return pool.getAmountOut(gasWei, ethToken);
     }
     findBestRoute(tokenIn, tokenOut, amountIn, gasPriceGwei, maxHops = 3) {
         /*
@@ -100,7 +101,8 @@ class RouteFinder {
             const gross = route.getOutput(amountIn);
             const gasEstimate = route.estimateGas();
             const gasCostWei = gasEstimate * gasPriceGwei * 1000000000n;
-            const net = gross - gasCostWei;
+            const gasCostInOutputToken = this.convertToOutputToken(gasCostWei, tokenOut);
+            const net = gross - gasCostInOutputToken;
             results.push({
                 route,
                 gross_output: gross,

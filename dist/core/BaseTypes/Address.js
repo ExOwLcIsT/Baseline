@@ -7,7 +7,7 @@ export class Address {
     }
     static fromString(s) {
         if (!HEX_REGEX.test(s)) {
-            throw new Error("Invalid Ethereum address");
+            throw new Error("Invalid address");
         }
         return new Address(s);
     }

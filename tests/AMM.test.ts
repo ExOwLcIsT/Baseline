@@ -1,10 +1,19 @@
+import { Address } from "../core/BaseTypes/Address";
 import UniswapV2Pair from "../pricing/AMM";
 import Token from "../pricing/Token";
 
 import { expect, test, describe } from "vitest";
 describe("AMM", () => {
-  const USDCToken = new Token("USDC", BigInt(Math.pow(10, 6)));
-  const ETHToken = new Token("ETH", BigInt(Math.pow(10, 18)));
+  const USDCToken = new Token(
+    "USDC",
+    10n ** 6n,
+    Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+  );
+  const ETHToken = new Token(
+    "ETH",
+    10n ** 18n,
+    Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+  );
 
   test("get basic amountOut ", () => {
     //1000 ETH / 2M USDC pool, buy 1 ETH worth
@@ -15,7 +24,7 @@ describe("AMM", () => {
       BigInt(2_000_000 * 10 ** 6), // 2M USDC
     );
 
-    const usdcIn = 2000;
+    const usdcIn = 2000n * 10n ** 6n;
     const ethOut = pair.getAmountOut(usdcIn, USDCToken);
 
     // Should get slightly less than 1 ETH due to fee + impact
@@ -34,9 +43,9 @@ describe("AMM", () => {
       BigInt(10561414.261179 * 10 ** 6),
     );
 
-    const ethIn = 0.07290358122491630;
+    const ethIn = 72903581224916300n;
     const usdcOut = pair.getAmountOut(ethIn, ETHToken);
-  
+
     // Should get slightly less than 1 ETH due to fee + impact
     expect(usdcOut).toBeLessThan(199 * 10 ** 6);
     expect(usdcOut).toBeGreaterThanOrEqual(198.783196 * 10 ** 6);
@@ -51,7 +60,7 @@ describe("AMM", () => {
       BigInt(10 ** 30),
     );
     // Should not raise or lose precision
-    const out = pair.getAmountOut(10 ** 25, USDCToken);
+    const out = pair.getAmountOut(10n ** 25n, USDCToken);
     expect(typeof out).toBe("bigint");
     expect(out > 0n).toBe(true);
   });
@@ -64,7 +73,7 @@ describe("AMM", () => {
       BigInt(2_000_000), // 2M USDC
     );
     const original_reserve = pair.reserve0;
-    const new_pair = pair.simulateSwap(10, ETHToken);
+    const new_pair = pair.simulateSwap(10n * 10n ** 18n, ETHToken);
     expect(pair.reserve0).toBe(original_reserve);
     expect(new_pair.reserve0).not.toBe(original_reserve);
   });

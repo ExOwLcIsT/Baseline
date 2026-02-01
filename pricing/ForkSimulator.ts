@@ -54,15 +54,16 @@ export default class ForkSimulator {
   private async simulatePoolSwap(
     pool: UniswapV2Pair,
     tokenIn: Token,
-    amountIn: number,
+    amountIn: bigint,
   ): Promise<SimulationResult> {
     try {
       const amountOut = pool.getAmountOut(amountIn, tokenIn);
-
+      //TODO
+      //Fork
       return {
         success: true,
         amountOut,
-        gasUsed: 110_000n,
+        gasUsed: 150_000n,
         error: undefined,
         logs: [],
       };
@@ -78,10 +79,10 @@ export default class ForkSimulator {
   }
   async simulateRoute(
     route: Route,
-    amountIn: number,
+    amountIn: bigint,
   ): Promise<SimulationResult> {
     let current = BigInt(amountIn);
-    let totalGas = 0n;
+    const totalGas = route.estimateGas();
 
     for (let i = 0; i < route.pools.length; i++) {
       const pool = route.pools[i];
@@ -92,7 +93,6 @@ export default class ForkSimulator {
       if (!res.success) return res;
 
       current = res.amountOut;
-      totalGas += res.gasUsed;
     }
 
     return {
@@ -106,7 +106,7 @@ export default class ForkSimulator {
 
   async compareSimulationVSCalculation(
     pair: UniswapV2Pair,
-    amountIn: number,
+    amountIn: bigint,
     tokenIn: Token,
     router: Address,
     swapParams: { data: string; value?: bigint },

@@ -39,7 +39,7 @@ class UniswapV2Pair {
       this.address,
     );
   }
-  getAmountOut(amountIn: number, tokenIn: Token): bigint {
+  getAmountOut(amountIn: bigint, tokenIn: Token): bigint {
     /*
       Calculate output amount for a given input.
       Must match Solidity exactly:
@@ -53,9 +53,7 @@ class UniswapV2Pair {
       throw new Error("Invalid token");
 
     const direction = tokenIn.name === this.token0.name;
-    const amountInWithFee = BigInt(
-      amountIn * Number(tokenIn.decimals) * (10000 - this.feeBPS),
-    );
+    const amountInWithFee = amountIn * BigInt(10000 - this.feeBPS);
     //Reserve that is increased (with counted fee)
     const reserveIn = direction ? this.reserve0 : this.reserve1;
     //Reserve that is decreased
@@ -113,7 +111,7 @@ class UniswapV2Pair {
     return num / denum;
   }
 
-  getExecutionPrice(amountIn: number, tokenIn: Token): number {
+  getExecutionPrice(amountIn: bigint, tokenIn: Token): number {
     /*
       Returns actual execution price for given trade size.
       */
@@ -126,11 +124,11 @@ class UniswapV2Pair {
           ? this.token1.decimals
           : this.token0.decimals,
       );
-    const executionPrice = amountIn / amountOut;
+    const executionPrice = Number(amountIn) / amountOut;
     return executionPrice;
   }
 
-  getPriceImpact(amountIn: number, tokenIn: Token): number {
+  getPriceImpact(amountIn: bigint, tokenIn: Token): number {
     /*
       Returns price impact as a decimal (0.01 = 1%).
       */
@@ -141,7 +139,7 @@ class UniswapV2Pair {
     return Math.round(((executionPrice - spotPrice) / spotPrice) * 10000) / 100;
   }
 
-  simulateSwap(amountIn: number, tokenIn: Token): UniswapV2Pair {
+  simulateSwap(amountIn: bigint, tokenIn: Token): UniswapV2Pair {
     /*
       Returns a NEW pair with updated reserves after the swap.
       (Useful for multi-hop simulation)
@@ -153,10 +151,10 @@ class UniswapV2Pair {
     const copy = this.copy();
     const amountOut = this.getAmountOut(amountIn, tokenIn);
     if (direction) {
-      copy.reserve0 += BigInt(amountIn * Number(tokenIn.decimals));
+      copy.reserve0 += amountIn;
       copy.reserve1 -= amountOut;
     } else {
-      copy.reserve1 += BigInt(amountIn * Number(tokenIn.decimals));
+      copy.reserve1 += amountIn;
       copy.reserve0 -= amountOut;
     }
     return copy;
@@ -214,9 +212,9 @@ class UniswapV2Pair {
     // -------------------
     // build tokens
     // -------------------
-    const token0 = new Token(symbol0, BigInt(10) * BigInt(decimals0), addr0);
+    const token0 = new Token(symbol0, BigInt(10) ** BigInt(decimals0), addr0);
 
-    const token1 = new Token(symbol1, BigInt(10) * BigInt(decimals1), addr1);
+    const token1 = new Token(symbol1, BigInt(10) ** BigInt(decimals1), addr1);
     // -------------------
     // return pair
     // -------------------

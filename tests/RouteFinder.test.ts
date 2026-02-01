@@ -2,11 +2,8 @@ import UniswapV2Pair from "../pricing/AMM";
 import Token from "../pricing/Token";
 import RouteFinder from "../pricing/RouteFinder";
 import { describe, test, beforeEach, expect } from "vitest";
+import { Address } from "../core/BaseTypes/Address";
 const ONE = 10n ** 18n;
-
-function t(name: string) {
-  return new Token(name, ONE);
-}
 
 function pool(a: Token, b: Token, rA: number, rB: number) {
   return new UniswapV2Pair(a, b, BigInt(rA) * ONE, BigInt(rB) * ONE);
@@ -18,9 +15,17 @@ describe("RouteFinder", () => {
   let USDC: Token;
 
   beforeEach(() => {
-    SHIB = t("SHIB");
-    ETH = t("ETH");
-    USDC = t("USDC");
+    SHIB = new Token("SHIB", 10n**18n, Address.fromString("0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"));
+    ETH = new Token(
+      "ETH",
+      10n ** 18n,
+      Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+    );
+    USDC = new Token(
+      "USDC",
+      10n ** 18n,
+      Address.fromString("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"),
+    );
   });
 
   test("direct vs multihop", () => {
@@ -35,7 +40,7 @@ describe("RouteFinder", () => {
 
     const finder = new RouteFinder(pools);
 
-    const [best] = finder.findBestRoute(SHIB, USDC, 1000, BigInt(1));
+    const [best] = finder.findBestRoute(SHIB, USDC, 1000n * SHIB.decimals, 1n);
 
     expect(best).not.toBeNull();
     expect(best).not.toBeUndefined();
@@ -53,7 +58,12 @@ describe("RouteFinder", () => {
 
     const finder = new RouteFinder(pools);
 
-    const [best] = finder.findBestRoute(SHIB, USDC, 1000, BigInt(3000));
+    const [best] = finder.findBestRoute(
+      SHIB,
+      USDC,
+      1000n * SHIB.decimals,
+      3000n,
+    );
 
     expect(best).not.toBeNull();
     expect(best).not.toBeUndefined();
@@ -62,7 +72,11 @@ describe("RouteFinder", () => {
 
   test("no route exists", () => {
     //Handles disconnected tokens gracefully
-    const DAI = t("DAI");
+    const DAI = new Token(
+      "DAI",
+      10n ** 6n,
+      Address.fromString("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+    );
 
     const pools = [pool(SHIB, ETH, 1000, 1000)];
 
@@ -72,7 +86,12 @@ describe("RouteFinder", () => {
 
     expect(routes.length).toBe(0);
 
-    const [best] = finder.findBestRoute(SHIB, DAI, 100, BigInt(10));
+    const [best] = finder.findBestRoute(
+      SHIB,
+      DAI,
+      100n * SHIB.decimals,
+      BigInt(10),
+    );
 
     expect(best).toBeUndefined();
   });
@@ -90,19 +109,12 @@ describe("RouteFinder", () => {
 
     const route = routes[0];
 
-    const amountIn = 1000;
+    const amountIn = 1000n * SHIB.decimals;
 
     const routeOut = route.getOutput(amountIn);
     const out1 = p1.getAmountOut(amountIn, SHIB);
-    const out2 = p2.getAmountOut(Number(out1) / Number(ETH.decimals), ETH);
+    const out2 = p2.getAmountOut(out1, ETH);
 
     expect(routeOut).toEqual(out2);
   });
 });
-
-//996006981039903172n
-
-//996006981039903172n
-//1984067703346028427339n
-
-//1984067703346028427339n

@@ -42,7 +42,7 @@ export default class PricingEngine {
   async get_quote(
     tokenIn: Token,
     tokenOut: Token,
-    amountIn: number,
+    amountIn: bigint,
     gasPriceGwei: bigint,
   ): Promise<Quote> {
     /*
@@ -79,6 +79,11 @@ export default class PricingEngine {
     console.log(`Detected swap: ${swap.dex} ${swap.method}`);
     console.log(`${swap.amountIn} → min ${swap.minAmountOut}`);
     console.log(` Slippage tolerance: ${swap.slippageTolerance}`);
+    this.simulator.simulateSwap(
+      swap.router,
+      { data: "0x", value: swap.amountIn },
+      swap.sender,
+    );
     for (const pool of this.pools.values()) {
       if (
         pool.token0.address?.lower === swap.tokenIn?.lower ||
@@ -91,14 +96,14 @@ export default class PricingEngine {
 }
 export class Quote {
   route: Route;
-  amountIn: number;
+  amountIn: bigint;
   expectedOutput: bigint;
   simulatedOutput: bigint;
   gasEstimate: bigint;
   timestamp: number;
   constructor(
     route: Route,
-    amountIn: number,
+    amountIn: bigint,
     expectedOutput: bigint,
     simulatedOutput: bigint,
     gasEstimate: bigint,

@@ -9,8 +9,8 @@ function parseArg(flag: string): string | undefined {
   return arg?.split("=")[1];
 }
 
-function parseSizes(str: string): number[] {
-  return str.split(",").map((x) => Number(x.trim()));
+function parseSizes(str: string): bigint[] {
+  return str.split(",").map((x) => BigInt(x.trim()));
 }
 
 function format(n: number, digits = 4) {
@@ -26,7 +26,7 @@ async function loadToken(addr: string, client: ChainClient): Promise<Token> {
 
   const [symbol, decimals] = await Promise.all([c.symbol(), c.decimals()]);
 
-  return new Token(symbol, BigInt(decimals));
+  return new Token(symbol, BigInt(decimals), Address.fromString(addr));
 }
 class PriceImpactAnalyzer {
   /*
@@ -39,7 +39,7 @@ class PriceImpactAnalyzer {
 
   generateImpactTable(
     token_in: string,
-    sizes: Array<number>, // List of input amounts to analyze
+    sizes: Array<bigint>,
   ): Array<Record<string, any>> {
     /*
         Returns list of:
@@ -73,30 +73,27 @@ class PriceImpactAnalyzer {
     return rows;
   }
 
-  findMaxSizeForImpact(tokenIn: Token, maxImpactPct: number): number {
+  findMaxSizeForImpact(tokenIn: Token, maxImpactPct: number): bigint {
     /*
       Binary search to find largest trade with impact <= max_impact_pct.
       */
-    const maxValue =
-      Number(
-        this.pair.token0.equals(tokenIn)
-          ? this.pair.reserve0
-          : this.pair.reserve1,
-      ) / Number(tokenIn.decimals);
+    const maxValue = this.pair.token0.equals(tokenIn)
+      ? this.pair.reserve0
+      : this.pair.reserve1;
     return this.findMaxSizeForImpactRecursion(
       tokenIn,
       maxImpactPct,
-      0,
+      0n,
       maxValue,
     );
   }
   findMaxSizeForImpactRecursion(
     tokenIn: Token,
     maxImpactPct: number,
-    min: number,
-    max: number,
-  ): number {
-    const value = (max + min) / 2;
+    min: bigint,
+    max: bigint,
+  ): bigint {
+    const value = (max + min) / 2n;
     const priceImpact = this.pair.getPriceImpact(value, tokenIn);
 
     if (max === min) return value;
@@ -118,10 +115,10 @@ class PriceImpactAnalyzer {
     return value;
   }
   estimateTrueCost(
-    amountIn: number, // human units of tokenIn
+    amountIn: bigint,
     tokenIn: Token,
-    gasPriceGwei: number, // gas price in gwei
-    gasEstimate: number = 150_000, // gas units
+    gasPriceGwei: number,
+    gasEstimate: number = 150_000,
   ) {
     const tokenOut = tokenIn.equals(this.pair.token0)
       ? this.pair.token1
@@ -150,7 +147,7 @@ class PriceImpactAnalyzer {
     const netOutput =
       Number(grossOutRaw) / Number(tokenOut.decimals) - gasCostInOutputToken;
 
-    const effectivePrice = amountIn / netOutput;
+    const effectivePrice = Number(amountIn) / netOutput;
 
     return {
       grossOutput: grossOutRaw,

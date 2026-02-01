@@ -53,6 +53,7 @@ export default class PricingEngine {
         console.log(`Detected swap: ${swap.dex} ${swap.method}`);
         console.log(`${swap.amountIn} → min ${swap.minAmountOut}`);
         console.log(` Slippage tolerance: ${swap.slippageTolerance}`);
+        this.simulator.simulateSwap(swap.router, { data: "0x", value: swap.amountIn }, swap.sender);
         for (const pool of this.pools.values()) {
             if (pool.token0.address?.lower === swap.tokenIn?.lower ||
                 pool.token1.address?.lower === swap.tokenIn?.lower) {

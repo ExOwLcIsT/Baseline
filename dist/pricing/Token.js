@@ -8,7 +8,7 @@ class Token {
         this.address = address;
     }
     equals(token0) {
-        if (this.name === token0.name && this.decimals === token0.decimals)
+        if (this.address.equals(token0.address))
             return true;
         return false;
     }

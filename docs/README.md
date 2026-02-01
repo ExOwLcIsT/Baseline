@@ -30,6 +30,15 @@
 │├── TransactionAnalyzer.ts  # On-chain tx analysis CLI
 │├── GasPrice.ts             # Gas price tracking
 │└── ChainErrors.ts          # Custom error types
+|pricing/
+│└── AMM.ts                  # UnitswapV2Pair math simulator
+│└── ForkSimulator.ts        # Fork simulator
+│└── Mempoolmonitor.ts       # Monitor of memory pool
+│└── PriceImpactAnalyzer.ts  # Analyzer of the swap prices
+│└── PricingEngine.ts        # Integration class
+│└── Route.ts                # Route for multi-hop
+│└── RouteFinder.ts
+│└── Token.ts                # Class for token
 ├scripts/
 │└── integrationTest.ts      # Integration tests
 ├tests/
@@ -48,28 +57,32 @@
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
 
 ### Setup
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/ExOwLcIsT/Baseline.git
 cd Baseline
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Create a `.env` file from the example:
+
 ```bash
 cp .env.example .env
 ```
 
 4. Configure environment variables:
+
 ```
 PRIVATE_KEY=<your_wallet_private_key>
 INFURA_RPC_URL=https://<net>.infura.io/v3/<your_api_key>
@@ -119,15 +132,32 @@ node ./dist/chain/TransactionAnalyzer.js 0x<transaction_hash> --rpc https://<net
 ```
 
 The analyzer provides:
+
 - Transaction metadata (hash, block, timestamp)
 - Sender/recipient information
 - ETH value transferred
 - Gas analysis and fees
 - Function signatures and decoded selectors
 
+# Price Impact Analysis
+
+Analyze price impact after swap
+
+```bash
+node .\dist\pricing\PriceImpactAnalyzer.js <pair_address> --token-in=<Token_symbol> --sizes=<array_of_amount_in_sizes>([1,10,1000])
+```
+
+The analyzer provides:
+
+- Token reserves
+- Spot price
+- Table with amount out, execution price and price impact in % for every size
+- Max trade for 1% impact
+
 ## Core Components
 
 ### WalletManager
+
 Handles wallet creation, key management, and transaction signing.
 
 ```typescript
@@ -148,6 +178,7 @@ const rawTx = await wallet.signTransaction(txRequest);
 ```
 
 ### ChainClient
+
 Communicates with blockchain via JSON-RPC.
 
 ```typescript
@@ -158,6 +189,7 @@ const tx = await client.getTransaction(txHash);
 ```
 
 ### CanonicalSerializer
+
 Ensures deterministic JSON serialization for consistent hashing.
 
 ```typescript
@@ -167,6 +199,7 @@ const isDeterministic = CanonicalSerializer.verify_determinism(obj, iterations);
 ```
 
 ### TransactionBuilder
+
 Constructs and validates blockchain transactions.
 
 ```typescript
@@ -176,13 +209,14 @@ const tx = new CustomTransactionRequest({
   chainId: 1,
   gasLimit: 21000,
   maxFeePerGas: 50n,
-  maxPriorityFee: 2n
+  maxPriorityFee: 2n,
 });
 ```
 
 ## Configuration
 
 ### TypeScript Configuration (`tsconfig.json`)
+
 - **Target**: ES2022
 - **Module**: NodeNext
 - **Strict Mode**: Enabled
@@ -190,9 +224,11 @@ const tx = new CustomTransactionRequest({
 - **Excludes**: node_modules, dist
 
 ### ESLint Configuration
+
 Enforces code quality and TypeScript best practices.
 
 ### Environment Variables
+
 ```env
 # Wallet private key (64 hex characters without 0x prefix)
 PRIVATE_KEY=
@@ -202,6 +238,10 @@ INFURA_RPC_URL=https://mainnet.infura.io/v3/YOUR_API_KEY
 
 # Optional: Alchemy RPC endpoint
 ALCHEMY_RPC_URL=
+
+# For memory pool
+INFURA_WS_RPC = <URL>
+
 ```
 
 ## Testing
@@ -209,6 +249,7 @@ ALCHEMY_RPC_URL=
 The project includes comprehensive tests using Vitest:
 
 ### WalletManager Tests
+
 - Wallet generation
 - Environment loading
 - Message signing and verification
@@ -216,12 +257,34 @@ The project includes comprehensive tests using Vitest:
 - Transaction signing
 
 ### CanonicalSerializer Tests
+
 - Alphabetical key sorting
 - Keccak256 hashing
 - Determinism verification
 - Nested object handling
 
+### AMM Tests
+
+- getting amout out
+- amount out matches solidity
+- integer math without floats
+- swap is immutable
+
+### RouteFinder Tests
+
+- getting amout out
+- amount out matches solidity
+- integer math without floats
+- swap is immutable
+
+### RouteFinder Tests
+
+- direct or multihop desides by gas price
+- in case of no routes
+- route output matches sequential swaps
+
 Run tests with coverage:
+
 ```bash
 npm test -- --coverage
 ```
@@ -231,20 +294,21 @@ npm test -- --coverage
 ### Code Quality
 
 Pre-commit hooks automatically:
+
 1. Run ESLint with auto-fix
 2. Format code with Prettier
-
-
 
 ## API Reference
 
 ### Address Type
+
 ```typescript
 const addr = Address.fromString("0x...");
 const str = addr.toString(); // "0x..."
 ```
 
 ### TokenAmount Type
+
 ```typescript
 // Create from raw value (wei for ETH)
 const amount = TokenAmount.fromRaw(1000000000000000000n, 18);
@@ -252,6 +316,7 @@ console.log(amount.toString()); // "1.0"
 ```
 
 ### Transaction Request
+
 ```typescript
 const tx = new CustomTransactionRequest({
   to: recipient,
@@ -260,7 +325,7 @@ const tx = new CustomTransactionRequest({
   nonce: 0,
   gasLimit: 21000,
   maxFeePerGas: 50n,
-  maxPriorityFee: 2n
+  maxPriorityFee: 2n,
 });
 ```
 

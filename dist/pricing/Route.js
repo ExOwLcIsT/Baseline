@@ -14,9 +14,7 @@ class Route {
     getOutput(amountIn) {
         // Simulate full route, return final output.x
         for (let i = 0; i < this.hops - 1; i++) {
-            amountIn =
-                Number(this.pools[i].getAmountOut(amountIn, this.path[i])) /
-                    Number(this.path[i + 1].decimals);
+            amountIn = this.pools[i].getAmountOut(amountIn, this.path[i]);
         }
         const amountOut = this.pools[this.hops - 1].getAmountOut(amountIn, this.path[this.hops - 1]);
         return amountOut;
@@ -24,11 +22,11 @@ class Route {
     getIntermediateAmounts(amountIn) {
         //Return amount at each step: [input, after_hop1, after_hop2, ...]
         const amounts = [];
-        amounts.push(BigInt(amountIn) * this.path[0].decimals);
+        amounts.push(amountIn);
         for (let i = 0; i < this.hops - 1; i++) {
             const amountOut = this.pools[i].getAmountOut(amountIn, this.path[i]);
             amounts.push(amountOut);
-            amountIn = Number(amountOut) / Number(this.path[i + 1].decimals);
+            amountIn = amountOut;
         }
         const amountOut = this.pools[this.hops - 1].getAmountOut(amountIn, this.path[this.hops]);
         amounts.push(amountOut);

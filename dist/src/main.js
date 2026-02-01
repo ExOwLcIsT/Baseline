@@ -24,24 +24,27 @@ console.log(wallet.address);
 const cc = new ChainClient();
 // const nonce = await cc.getNonce(Address.fromString(wallet.address));
 // console.log(nonce);
-const USDCToken = new Token("USDC", BigInt(Math.pow(10, 6)));
-const ETHToken = new Token("ETH", BigInt(Math.pow(10, 18)));
-const USDToken = new Token("USDT", BigInt(Math.pow(10, 6)));
+const USDCToken = new Token("USDC", 10n ** 6n, Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"));
+const ETHToken = new Token("ETH", 10n ** 18n, Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"));
+const USDToken = new Token("USDT", 10n ** 6n, Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"));
 const uni = new UniswapV2Pair(ETHToken, USDCToken, BigInt(1000 * 10 ** 18), BigInt(2000000 * 10 ** 6));
 const uni1 = new UniswapV2Pair(USDCToken, USDToken, BigInt(2000000 * 10 ** 6), BigInt(2000000 * 10 ** 6));
-console.log("Amount out for 10_000 USDC: " + uni.getAmountOut(10_000, USDCToken) + " wei");
+console.log("Amount out for 10_000 USDC: " +
+    uni.getAmountOut(10000n * 10n ** 6n, USDCToken) +
+    " wei");
 console.log("Amount in for 1128017927007915696 wei: " +
-    uni.getAmountIn(BigInt(1128017927007915696n), ETHToken));
+    uni.getAmountIn(1128017927007915696n, ETHToken));
 console.log("Spot price of USDC: " + uni.getSpotPrice(USDCToken));
-console.log("Execution price of USDC: " + uni.getExecutionPrice(10_000, USDCToken));
-console.log("Price impact: " + uni.getPriceImpact(10_000, USDCToken) + "%");
-console.log("Simulated swap: ", uni.simulateSwap(10_000, USDCToken));
+console.log("Execution price of USDC: " +
+    uni.getExecutionPrice(10000n * 10n ** 6n, USDCToken));
+console.log("Price impact: " + uni.getPriceImpact(10000n * 10n ** 6n, USDCToken) + "%");
+console.log("Simulated swap: ", uni.simulateSwap(10000n * 10n ** 6n, USDCToken));
 console.log("From chain ", await UniswapV2Pair.fromChain(Address.fromString("0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"), cc));
 //const price_impact_analyzer = new PriceImpactAnalyzer(uni);
 //console.log(price_impact_analyzer.generateImpactTable("ETH", [1, 2, 3, 4, 5]));
 const route = new Route([uni, uni1], [ETHToken, USDCToken, USDToken]);
-console.log(route.getOutput(1));
-console.log(route.getIntermediateAmounts(1));
+console.log("Route out: " + route.getOutput(1n * 10n ** 18n));
+console.log("Route imtermediate outs: " + route.getIntermediateAmounts(1n * 10n ** 18n));
 // const monitor = new MempoolMonitor(process.env.INFURA_WS_RPC!, (swap) => {
 //   console.log("Swap detected:", swap);
 //   console.log(`Detected swap: ${swap.dex} ${swap.method}`);
@@ -49,5 +52,15 @@ console.log(route.getIntermediateAmounts(1));
 //   console.log(` Slippage tolerance: ${swap.slippageTolerance}`);
 // });
 // await monitor.start();
-const engine = new PricingEngine(cc, process.env["INFURA_RPC_URL"], process.env["INFURA_WS_RPC"]);
+// async function loadToken(addr: string, client: ChainClient): Promise<Token> {
+//   const abi = [
+//     "function symbol() view returns (string)",
+//     "function decimals() view returns (uint8)",
+//   ];
+//   const c = new Contract(addr, abi, client.provider);
+//   const [symbol, decimals] = await Promise.all([c.symbol(), c.decimals()]);
+//   return new Token(symbol, BigInt(decimals), Address.fromString(addr));
+// }
+// console.log(await loadToken("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", cc));
+const engine = new PricingEngine(cc, "127.0.0.1:8545", process.env["INFURA_WS_RPC"]);
 engine.monitor.start();

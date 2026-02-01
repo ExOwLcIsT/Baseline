@@ -9,7 +9,7 @@ function parseArg(flag) {
     return arg?.split("=")[1];
 }
 function parseSizes(str) {
-    return str.split(",").map((x) => Number(x.trim()));
+    return str.split(",").map((x) => BigInt(x.trim()));
 }
 function format(n, digits = 4) {
     return n.toLocaleString(undefined, { maximumFractionDigits: digits });
@@ -21,7 +21,7 @@ async function loadToken(addr, client) {
     ];
     const c = new Contract(addr, abi, client.provider);
     const [symbol, decimals] = await Promise.all([c.symbol(), c.decimals()]);
-    return new Token(symbol, BigInt(decimals));
+    return new Token(symbol, BigInt(decimals), Address.fromString(addr));
 }
 class PriceImpactAnalyzer {
     /*
@@ -63,13 +63,13 @@ class PriceImpactAnalyzer {
         /*
           Binary search to find largest trade with impact <= max_impact_pct.
           */
-        const maxValue = Number(this.pair.token0.equals(tokenIn)
+        const maxValue = this.pair.token0.equals(tokenIn)
             ? this.pair.reserve0
-            : this.pair.reserve1) / Number(tokenIn.decimals);
-        return this.findMaxSizeForImpactRecursion(tokenIn, maxImpactPct, 0, maxValue);
+            : this.pair.reserve1;
+        return this.findMaxSizeForImpactRecursion(tokenIn, maxImpactPct, 0n, maxValue);
     }
     findMaxSizeForImpactRecursion(tokenIn, maxImpactPct, min, max) {
-        const value = (max + min) / 2;
+        const value = (max + min) / 2n;
         const priceImpact = this.pair.getPriceImpact(value, tokenIn);
         if (max === min)
             return value;
@@ -80,9 +80,7 @@ class PriceImpactAnalyzer {
         }
         return value;
     }
-    estimateTrueCost(amountIn, // human units of tokenIn
-    tokenIn, gasPriceGwei, // gas price in gwei
-    gasEstimate = 150_000) {
+    estimateTrueCost(amountIn, tokenIn, gasPriceGwei, gasEstimate = 150_000) {
         const tokenOut = tokenIn.equals(this.pair.token0)
             ? this.pair.token1
             : this.pair.token0;
@@ -105,7 +103,7 @@ class PriceImpactAnalyzer {
             gasCostInOutputToken = gasCostEth * spotPrice; // rough estimate
         }
         const netOutput = Number(grossOutRaw) / Number(tokenOut.decimals) - gasCostInOutputToken;
-        const effectivePrice = amountIn / netOutput;
+        const effectivePrice = Number(amountIn) / netOutput;
         return {
             grossOutput: grossOutRaw,
             gasCostEth,
