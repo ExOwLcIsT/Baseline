@@ -17,6 +17,7 @@ secp.hashes.hmacSha256 = (key, ...msgs) => {
 };
 // Creating wallet from environment
 const wallet = WalletManager.fromEnv();
+console.log(wallet.address);
 //ChainClient connects to sepolia.infura.io
 const cc = new ChainClient();
 // const nonce = await cc.getNonce(Address.fromString(wallet.address));

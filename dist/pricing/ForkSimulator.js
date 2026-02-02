@@ -1,21 +1,30 @@
-import { JsonRpcProvider } from "ethers";
+import { Contract, JsonRpcProvider } from "ethers";
 import { Interface } from "ethers";
 const pairIface = new Interface([
     "function swap(uint amount0Out,uint amount1Out,address to,bytes data)",
 ]);
+const ERC20_ABI = [
+    "function balanceOf(address owner) view returns (uint256)",
+    "function transfer(address to, uint256 amount) returns (bool)",
+    "function approve(address spender, uint256 amount) returns (bool)",
+];
 export default class ForkSimulator {
-    /*
-      Simulates transactions on a local fork.
-      */
     provider;
     constructor(fork_url) {
-        /*
-            fork_url: Local Anvil/Hardhat fork RPC
-            */
         this.provider = new JsonRpcProvider(fork_url);
     }
-    async simulateSwap(pair, amount0Out, amount1Out, sender) {
+    async simulateSwap(pool, amountIn, amount0Out, amount1Out, sender, tokenIn) {
         try {
+            // --- impersonate sender (для fork) ---
+            await this.provider.send("hardhat_impersonateAccount", [
+                sender.toString(),
+            ]);
+            const signer = await this.provider.getSigner(sender.toString());
+            // --- підключаємо токен через Signer ---
+            const tokenContract = new Contract(tokenIn.address.toString(), ERC20_ABI, signer);
+            // --- transfer токени на пул ---
+            await tokenContract.transfer(pool.address, amountIn);
+            // --- encode swap ---
             const data = pairIface.encodeFunctionData("swap", [
                 amount0Out,
                 amount1Out,
@@ -23,8 +32,8 @@ export default class ForkSimulator {
                 "0x",
             ]);
             const tx = {
-                to: pair.address?.toString(),
                 from: sender.toString(),
+                to: pool.address?.toString(),
                 data,
                 value: 0n,
             };
@@ -69,12 +78,9 @@ export default class ForkSimulator {
             else {
                 throw new Error("Route token not in pool");
             }
-            console.log("a0 " + amount0Out);
-            console.log("a1 " + amount1Out);
-            const res = await this.simulateSwap(route.pools[i], amount0Out, amount1Out, sender);
-            if (!res.success) {
+            const res = await this.simulateSwap(route.pools[i], current, amount0Out, amount1Out, sender, route.path[i]);
+            if (!res.success)
                 return res;
-            }
             current = res.amountOut;
             totalGas += res.gasUsed;
         }
@@ -85,22 +91,5 @@ export default class ForkSimulator {
             error: undefined,
             logs: [],
         };
-    }
-    async compareSimulationVSCalculation(pair, amountIn, tokenIn, router, swapParams, sender) {
-        const calculated = pair.getAmountOut(amountIn, tokenIn);
-        const simulated = await this.simulateSwap(pair, tokenIn.equals(pair.token0) ? 0n : pair.getAmountOut(amountIn, tokenIn), tokenIn.equals(pair.token1) ? 0n : pair.getAmountOut(amountIn, tokenIn), sender);
-        return {
-            calculated,
-            simulated: simulated.amountOut,
-            difference: calculated > simulated.amountOut
-                ? calculated - simulated.amountOut
-                : simulated.amountOut - calculated,
-            match: calculated === simulated.amountOut,
-        };
-    }
-    extractAmountOut(result) {
-        if (!result || result === "0x")
-            return 0n;
-        return BigInt(result);
     }
 }
