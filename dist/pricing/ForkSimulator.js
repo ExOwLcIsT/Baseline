@@ -1,4 +1,4 @@
-import { Contract, JsonRpcProvider } from "ethers";
+import { Contract, JsonRpcProvider, getAddress } from "ethers";
 import { Interface } from "ethers";
 const pairIface = new Interface([
     "function swap(uint amount0Out,uint amount1Out,address to,bytes data)",
@@ -10,30 +10,32 @@ const ERC20_ABI = [
 ];
 export default class ForkSimulator {
     provider;
-    constructor(fork_url) {
-        this.provider = new JsonRpcProvider(fork_url);
+    constructor(forkUrl) {
+        this.provider = new JsonRpcProvider(forkUrl);
     }
     async simulateSwap(pool, amountIn, amount0Out, amount1Out, sender, tokenIn) {
         try {
-            // --- impersonate sender (для fork) ---
-            await this.provider.send("hardhat_impersonateAccount", [
-                sender.toString(),
-            ]);
-            const signer = await this.provider.getSigner(sender.toString());
-            // --- підключаємо токен через Signer ---
+            if (!pool.address)
+                throw new Error("Pool has no address");
+            const from = getAddress(sender.toString());
+            const to = getAddress(pool.address.toString());
+            await this.provider.send("hardhat_impersonateAccount", [from]);
+            const signer = await this.provider.getSigner(from);
             const tokenContract = new Contract(tokenIn.address.toString(), ERC20_ABI, signer);
-            // --- transfer токени на пул ---
-            await tokenContract.transfer(pool.address, amountIn);
-            // --- encode swap ---
+            const balance = await tokenContract.balanceOf(from);
+            if (BigInt(balance.toString()) < amountIn) {
+                throw new Error(`Insufficient token balance for simulation. Have ${balance}, need ${amountIn}`);
+            }
+            await tokenContract.transfer(to, amountIn);
             const data = pairIface.encodeFunctionData("swap", [
                 amount0Out,
                 amount1Out,
-                sender.toString(),
+                from,
                 "0x",
             ]);
             const tx = {
-                from: sender.toString(),
-                to: pool.address?.toString(),
+                from,
+                to,
                 data,
                 value: 0n,
             };
@@ -64,21 +66,21 @@ export default class ForkSimulator {
         let current = amountIn;
         let totalGas = 0n;
         for (let i = 0; i < route.hops; i++) {
-            if (!route.pools[i].address) {
+            const pool = route.pools[i];
+            if (!pool.address)
                 throw new Error("Pool does not have address");
-            }
             let amount0Out = 0n;
             let amount1Out = 0n;
-            if (route.pools[i].token0.equals(route.path[route.hops])) {
-                amount1Out = route.pools[i].getAmountOut(current, route.path[i]);
+            if (pool.token0.equals(route.path[route.hops])) {
+                amount1Out = pool.getAmountOut(current, route.path[i]);
             }
-            else if (route.pools[i].token1.equals(route.path[route.hops])) {
-                amount0Out = route.pools[i].getAmountOut(current, route.path[i]);
+            else if (pool.token1.equals(route.path[route.hops])) {
+                amount0Out = pool.getAmountOut(current, route.path[i]);
             }
             else {
                 throw new Error("Route token not in pool");
             }
-            const res = await this.simulateSwap(route.pools[i], current, amount0Out, amount1Out, sender, route.path[i]);
+            const res = await this.simulateSwap(pool, current, amount0Out, amount1Out, sender, route.path[i]);
             if (!res.success)
                 return res;
             current = res.amountOut;

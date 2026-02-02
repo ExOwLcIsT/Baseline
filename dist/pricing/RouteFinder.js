@@ -77,7 +77,6 @@ class RouteFinder {
             const gasCost = route.estimateGas() * gasPriceGwei * BigInt(1000000000);
             const gasCostInOutputToken = this.convertToOutputToken(gasCost, tokenOut);
             const netOutput = grossOutput - gasCostInOutputToken;
-            console.log(netOutput);
             if (netOutput > bestNetOutput) {
                 bestNetOutput = netOutput;
                 bestRoute = route;

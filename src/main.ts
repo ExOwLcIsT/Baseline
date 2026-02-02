@@ -124,14 +124,15 @@ await engine.getQuote(
   USDCToken,
   1_000_000_000_000n,
   0n,
-  Address.fromString("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+  Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
 );
+console.log("success");
 const quote = await engine.getQuote(
   USDCToken,
   USDToken,
   10n * USDCToken.decimals,
   0n,
-  Address.fromString("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+  Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
 );
 
 console.log(quote);

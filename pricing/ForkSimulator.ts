@@ -1,9 +1,10 @@
-import { Contract, JsonRpcProvider } from "ethers";
+import { Contract, JsonRpcProvider, getAddress } from "ethers";
 import { Address } from "../core/BaseTypes/Address.js";
-import UniswapV2Pair from "./AMM.js";
-import Route from "./Route.js";
-import Token from "./Token.js";
+
 import { Interface } from "ethers";
+import UniswapV2Pair from "../pricing/AMM.js";
+import Token from "../pricing/Token.js";
+import Route from "../pricing/Route.js";
 
 const pairIface = new Interface([
   "function swap(uint amount0Out,uint amount1Out,address to,bytes data)",
@@ -15,11 +16,19 @@ const ERC20_ABI = [
   "function approve(address spender, uint256 amount) returns (bool)",
 ];
 
+export interface SimulationResult {
+  success: boolean;
+  amountOut: bigint;
+  gasUsed: bigint;
+  error: string | undefined;
+  logs: any[];
+}
+
 export default class ForkSimulator {
   private provider: JsonRpcProvider;
 
-  constructor(fork_url: string) {
-    this.provider = new JsonRpcProvider(fork_url);
+  constructor(forkUrl: string) {
+    this.provider = new JsonRpcProvider(forkUrl);
   }
 
   async simulateSwap(
@@ -31,33 +40,39 @@ export default class ForkSimulator {
     tokenIn: Token,
   ): Promise<SimulationResult> {
     try {
-      // --- impersonate sender (для fork) ---
-      await this.provider.send("hardhat_impersonateAccount", [
-        sender.toString(),
-      ]);
-      const signer = await this.provider.getSigner(sender.toString());
+      if (!pool.address) throw new Error("Pool has no address");
 
-      // --- підключаємо токен через Signer ---
+      const from = getAddress(sender.toString());
+      const to = getAddress(pool.address.toString());
+
+      await this.provider.send("hardhat_impersonateAccount", [from]);
+      const signer = await this.provider.getSigner(from);
+
       const tokenContract = new Contract(
         tokenIn.address.toString(),
         ERC20_ABI,
         signer,
       );
 
-      // --- transfer токени на пул ---
-      await tokenContract.transfer(pool.address, amountIn);
+      const balance = await tokenContract.balanceOf(from);
+      if (BigInt(balance.toString()) < amountIn) {
+        throw new Error(
+          `Insufficient token balance for simulation. Have ${balance}, need ${amountIn}`,
+        );
+      }
 
-      // --- encode swap ---
+      await tokenContract.transfer(to, amountIn);
+
       const data = pairIface.encodeFunctionData("swap", [
         amount0Out,
         amount1Out,
-        sender.toString(),
+        from,
         "0x",
       ]);
 
       const tx = {
-        from: sender.toString(),
-        to: pool.address?.toString(),
+        from,
+        to,
         data,
         value: 0n,
       };
@@ -96,23 +111,22 @@ export default class ForkSimulator {
     let totalGas = 0n;
 
     for (let i = 0; i < route.hops; i++) {
-      if (!route.pools[i].address) {
-        throw new Error("Pool does not have address");
-      }
+      const pool = route.pools[i];
+      if (!pool.address) throw new Error("Pool does not have address");
 
       let amount0Out = 0n;
       let amount1Out = 0n;
 
-      if (route.pools[i].token0.equals(route.path[route.hops])) {
-        amount1Out = route.pools[i].getAmountOut(current, route.path[i]);
-      } else if (route.pools[i].token1.equals(route.path[route.hops])) {
-        amount0Out = route.pools[i].getAmountOut(current, route.path[i]);
+      if (pool.token0.equals(route.path[route.hops])) {
+        amount1Out = pool.getAmountOut(current, route.path[i]);
+      } else if (pool.token1.equals(route.path[route.hops])) {
+        amount0Out = pool.getAmountOut(current, route.path[i]);
       } else {
         throw new Error("Route token not in pool");
       }
 
       const res = await this.simulateSwap(
-        route.pools[i],
+        pool,
         current,
         amount0Out,
         amount1Out,
@@ -134,12 +148,4 @@ export default class ForkSimulator {
       logs: [],
     };
   }
-}
-
-export interface SimulationResult {
-  success: boolean;
-  amountOut: bigint;
-  gasUsed: bigint;
-  error: string | undefined;
-  logs: any[];
 }
