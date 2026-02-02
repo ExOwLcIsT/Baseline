@@ -13,10 +13,10 @@ class Route {
     }
     getOutput(amountIn) {
         // Simulate full route, return final output.x
-        for (let i = 0; i < this.hops - 1; i++) {
-            amountIn = this.pools[i].getAmountOut(amountIn, this.path[i]);
+        let amountOut = amountIn;
+        for (let i = 0; i < this.hops; i++) {
+            amountOut = this.pools[i].getAmountOut(amountOut, this.path[i]);
         }
-        const amountOut = this.pools[this.hops - 1].getAmountOut(amountIn, this.path[this.hops - 1]);
         return amountOut;
     }
     getIntermediateAmounts(amountIn) {

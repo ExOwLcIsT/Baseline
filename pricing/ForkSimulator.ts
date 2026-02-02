@@ -1,4 +1,4 @@
-import { Contract, JsonRpcProvider, getAddress } from "ethers";
+import { JsonRpcProvider } from "ethers";
 import { Address } from "../core/BaseTypes/Address.js";
 
 import { Interface } from "ethers";
@@ -6,15 +6,9 @@ import UniswapV2Pair from "../pricing/AMM.js";
 import Token from "../pricing/Token.js";
 import Route from "../pricing/Route.js";
 
-const pairIface = new Interface([
-  "function swap(uint amount0Out,uint amount1Out,address to,bytes data)",
+const routerIface = new Interface([
+  "function swapExactTokensForTokens(uint amountIn,uint amountOutMin,address[] path,address to,uint deadline) returns (uint[] amounts)",
 ]);
-
-const ERC20_ABI = [
-  "function balanceOf(address owner) view returns (uint256)",
-  "function transfer(address to, uint256 amount) returns (bool)",
-  "function approve(address spender, uint256 amount) returns (bool)",
-];
 
 export interface SimulationResult {
   success: boolean;
@@ -32,49 +26,31 @@ export default class ForkSimulator {
   }
 
   async simulateSwap(
-    pool: UniswapV2Pair,
-    amountIn: bigint,
-    amount0Out: bigint,
-    amount1Out: bigint,
+    router: Address,
+    swapParams: {
+      amountIn: bigint;
+      amountOutMin: bigint;
+      path: string[];
+      deadline: number;
+    },
     sender: Address,
-    tokenIn: Token,
   ): Promise<SimulationResult> {
     try {
-      if (!pool.address) throw new Error("Pool has no address");
+      if (!router) throw new Error("No router address");
 
-      const from = getAddress(sender.toString());
-      const to = getAddress(pool.address.toString());
-
-      await this.provider.send("hardhat_impersonateAccount", [from]);
-      const signer = await this.provider.getSigner(from);
-
-      const tokenContract = new Contract(
-        tokenIn.address.toString(),
-        ERC20_ABI,
-        signer,
-      );
-
-      const balance = await tokenContract.balanceOf(from);
-      if (BigInt(balance.toString()) < amountIn) {
-        throw new Error(
-          `Insufficient token balance for simulation. Have ${balance}, need ${amountIn}`,
-        );
-      }
-
-      await tokenContract.transfer(to, amountIn);
-
-      const data = pairIface.encodeFunctionData("swap", [
-        amount0Out,
-        amount1Out,
-        from,
-        "0x",
+      const data = routerIface.encodeFunctionData("swapExactTokensForTokens", [
+        swapParams.amountIn,
+        swapParams.amountOutMin,
+        swapParams.path,
+        router.checksum,
+        swapParams.deadline,
       ]);
 
       const tx = {
-        from,
-        to,
+        from: sender.checksum,
+        to: router.checksum,
         data,
-        value: 0n,
+        value: swapParams.amountIn,
       };
 
       const gasUsed = await this.provider.estimateGas(tx);
@@ -82,7 +58,7 @@ export default class ForkSimulator {
 
       return {
         success: true,
-        amountOut: amount0Out + amount1Out,
+        amountOut: 0n,
         gasUsed,
         error: undefined,
         logs: [],
@@ -107,45 +83,25 @@ export default class ForkSimulator {
       throw new Error("Route has no pools to simulate");
     }
 
-    let current = amountIn;
-    let totalGas = 0n;
-
-    for (let i = 0; i < route.hops; i++) {
-      const pool = route.pools[i];
-      if (!pool.address) throw new Error("Pool does not have address");
-
-      let amount0Out = 0n;
-      let amount1Out = 0n;
-
-      if (pool.token0.equals(route.path[route.hops])) {
-        amount1Out = pool.getAmountOut(current, route.path[i]);
-      } else if (pool.token1.equals(route.path[route.hops])) {
-        amount0Out = pool.getAmountOut(current, route.path[i]);
-      } else {
-        throw new Error("Route token not in pool");
-      }
-
-      const res = await this.simulateSwap(
-        pool,
-        current,
-        amount0Out,
-        amount1Out,
-        sender,
-        route.path[i],
-      );
-
-      if (!res.success) return res;
-
-      current = res.amountOut;
-      totalGas += res.gasUsed;
-    }
+    const path = route.path.map((t) => t.address.checksum);
+    const deadline = Date.now() + 3000;
+    const res = await this.simulateSwap(
+      Address.fromString("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"),
+      {
+        amountIn,
+        amountOutMin: 0n,
+        path,
+        deadline,
+      },
+      sender,
+    );
 
     return {
-      success: true,
-      amountOut: current,
-      gasUsed: totalGas,
-      error: undefined,
-      logs: [],
+      success: res.success,
+      amountOut: res.amountOut,
+      gasUsed: res.gasUsed,
+      error: res.error,
+      logs: res.logs,
     };
   }
 }

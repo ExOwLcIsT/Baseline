@@ -60,7 +60,7 @@ class UniswapV2Pair {
     const reserveOut = direction ? this.reserve1 : this.reserve0;
 
     const numenator = reserveOut * amountInWithFee;
-    const denumenator = BigInt(Number(reserveIn) * 10000) + amountInWithFee;
+    const denumenator = reserveIn * 10000n + amountInWithFee;
     const amountOut = numenator / denumenator;
 
     return amountOut;
@@ -73,7 +73,7 @@ class UniswapV2Pair {
     if (!tokenOut.equals(this.token0) && !tokenOut.equals(this.token1))
       throw new Error("Invalid token");
 
-    const direction = tokenOut.name === this.token0.name;
+    const direction = tokenOut.equals(this.token0);
 
     //Reserve that is increased (with counted fee)
     const reserveIn = direction

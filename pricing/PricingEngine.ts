@@ -1,4 +1,3 @@
-import { Interface } from "ethers";
 import ChainClient from "../chain/ChainClient.js";
 import { Address } from "../core/BaseTypes/Address.js";
 import UniswapV2Pair from "./AMM.js";
@@ -87,13 +86,14 @@ export default class PricingEngine {
     console.log(`Detected swap: ${swap.dex} ${swap.method}`);
     console.log(`${swap.amountIn} → min ${swap.minAmountOut}`);
     console.log(` Slippage tolerance: ${swap.slippageTolerance}`);
-
-    for (const pool of this.pools.values()) {
-      if (
-        pool.token0.address?.lower === swap.tokenIn?.lower ||
-        pool.token1.address?.lower === swap.tokenIn?.lower
-      ) {
-        this.refreshPool(pool.address!);
+    if (this.pools) {
+      for (const pool of this.pools.values()) {
+        if (
+          pool.token0.address?.lower === swap.tokenIn?.lower ||
+          pool.token1.address?.lower === swap.tokenIn?.lower
+        ) {
+          this.refreshPool(pool.address!);
+        }
       }
     }
   }

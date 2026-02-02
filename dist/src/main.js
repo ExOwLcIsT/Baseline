@@ -89,8 +89,8 @@ await engine.loadPools([
     Address.fromString("0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"),
     Address.fromString("0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852"),
 ]);
-await engine.getQuote(ETHToken, USDCToken, 1000000000000n, 0n, Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"));
-console.log("success");
-const quote = await engine.getQuote(USDCToken, USDToken, 10n * USDCToken.decimals, 0n, Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"));
+let quote = await engine.getQuote(ETHToken, USDCToken, 1000000000000n, 0n, Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"));
 console.log(quote);
-// engine.monitor.start();
+quote = await engine.getQuote(USDCToken, USDToken, 10n * USDCToken.decimals, 0n, Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"));
+console.log(quote);
+//engine.monitor.start();
