@@ -42,7 +42,7 @@ export class CustomTransactionReceipt {
     return TokenAmount.fromRaw(
       this.gasUsed * this.effectiveGasPrice,
       18,
-      "ETH",
+      "WETH",
     );
   }
 

@@ -19,7 +19,7 @@ export class CustomTransactionReceipt {
      * fee = gasUsed * effectiveGasPrice
      */
     get txFee() {
-        return TokenAmount.fromRaw(this.gasUsed * this.effectiveGasPrice, 18, "ETH");
+        return TokenAmount.fromRaw(this.gasUsed * this.effectiveGasPrice, 18, "WETH");
     }
     /**
      * Parse receipt from ethers result

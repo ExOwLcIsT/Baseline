@@ -20,6 +20,7 @@ class Route {
     for (let i = 0; i < this.hops - 1; i++) {
       amountIn = this.pools[i].getAmountOut(amountIn, this.path[i]);
     }
+
     const amountOut = this.pools[this.hops - 1].getAmountOut(
       amountIn,
       this.path[this.hops - 1],

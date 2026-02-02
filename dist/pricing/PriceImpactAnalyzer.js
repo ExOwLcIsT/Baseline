@@ -44,14 +44,15 @@ class PriceImpactAnalyzer {
         */
         const rows = [];
         const tokenIn = token_in === this.pair.token0.name ? this.pair.token0 : this.pair.token1;
+        const tokenOut = token_in === this.pair.token0.name ? this.pair.token1 : this.pair.token0;
         const spot = this.pair.getSpotPrice(tokenIn);
         for (const amountIn of sizes) {
             const amountOut = this.pair.getAmountOut(amountIn, tokenIn);
             const executionPrice = this.pair.getExecutionPrice(amountIn, tokenIn);
             const impactPct = this.pair.getPriceImpact(amountIn, tokenIn);
             rows.push({
-                amountIn: amountIn,
-                amountOut: amountOut,
+                amountIn: amountIn / tokenIn.decimals,
+                amountOut: amountOut / tokenOut.decimals,
                 spotPrice: spot,
                 executionPrice: executionPrice,
                 priceImpactPct: impactPct,
@@ -176,6 +177,9 @@ node impact_analyzer.js <pair_address> --token-in=USDC --sizes=1000,10000,100000
     console.log("-".repeat(66));
     console.log(`│ ${"In".padStart(10)} │ ${"Out".padStart(22)} │ ${"Exec Price".padStart(12)} │ ${"Impact %".padStart(9)} │`);
     console.log("-".repeat(66));
+    for (let i = 0; i < sizes.length; i++) {
+        sizes[i] *= tokenIn.decimals;
+    }
     const rows = analyzer.generateImpactTable(tokenIn.name, sizes);
     for (const r of rows) {
         console.log(`│ ${format(r.amountIn).padStart(10)} │ ${format(r.amountOut).padStart(22)} │ ${format(r.executionPrice, 6).padStart(12)} │ ${format(r.priceImpactPct, 4).padStart(9)} │`);

@@ -40,7 +40,6 @@ export default class MempoolMonitor {
   };
 
   constructor(wsUrl: string, callback: Callback) {
-    console.log(wsUrl);
     this.provider = new WebSocketProvider(wsUrl);
     this.callback = callback;
   }

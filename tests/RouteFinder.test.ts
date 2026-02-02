@@ -17,7 +17,7 @@ describe("RouteFinder", () => {
   beforeEach(() => {
     SHIB = new Token("SHIB", 10n**18n, Address.fromString("0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"));
     ETH = new Token(
-      "ETH",
+      "WETH",
       10n ** 18n,
       Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
     );

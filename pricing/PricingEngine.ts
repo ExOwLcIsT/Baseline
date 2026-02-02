@@ -1,3 +1,4 @@
+import { Interface } from "ethers";
 import ChainClient from "../chain/ChainClient.js";
 import { Address } from "../core/BaseTypes/Address.js";
 import UniswapV2Pair from "./AMM.js";
@@ -6,7 +7,6 @@ import MempoolMonitor, { ParsedSwap } from "./MempoolMonitor.js";
 import Route from "./Route.js";
 import RouteFinder from "./RouteFinder.js";
 import Token from "./Token.js";
-
 export default class PricingEngine {
   /*
     Main interface for the pricing module.
@@ -18,18 +18,21 @@ export default class PricingEngine {
   pools: Map<Address, UniswapV2Pair>;
   router?: RouteFinder;
   constructor(chainClient: ChainClient, forkUrl: string, wsUrl: string) {
-    this.client = chainClient;
+    this.client = new ChainClient(forkUrl);
     this.simulator = new ForkSimulator(forkUrl);
     this.monitor = new MempoolMonitor(wsUrl, this.onMempoolSwap);
     this.pools = new Map();
     this.router = undefined;
   }
-  async load_pools(pool_addresses: Address[]) {
+  async loadPools(pool_addresses: Address[]) {
     // Load pool data from chain.
-    pool_addresses.forEach(async (addr) => {
-      this.pools.set(addr, await UniswapV2Pair.fromChain(addr, this.client));
-    });
-
+    for (let i = 0; i < pool_addresses.length; i++) {
+      const pair = await UniswapV2Pair.fromChain(
+        pool_addresses[i],
+        this.client,
+      );
+      this.pools.set(pool_addresses[i], pair);
+    }
     this.router = new RouteFinder(Array.from(this.pools.values()));
   }
   refreshPool(address: Address) {
@@ -39,11 +42,12 @@ export default class PricingEngine {
 
     pair.refreshReserves(this.client);
   }
-  async get_quote(
+  async getQuote(
     tokenIn: Token,
     tokenOut: Token,
     amountIn: bigint,
     gasPriceGwei: bigint,
+    sender: Address,
   ): Promise<Quote> {
     /*
         Get best quote for a swap.
@@ -56,10 +60,14 @@ export default class PricingEngine {
     );
 
     // Verify with simulation
-    const simResult = await this.simulator.simulateRoute(route, amountIn);
+    const simResult = await this.simulator.simulateRoute(
+      route,
+      amountIn,
+      sender,
+    );
 
     if (!simResult.success) {
-      throw Error("Simulation failed: {sim_result.error}");
+      throw Error(`Simulation failed: ${simResult.error}`);
     }
 
     return new Quote(
@@ -71,7 +79,7 @@ export default class PricingEngine {
       Date.now(),
     );
   }
-  onMempoolSwap(swap: ParsedSwap) {
+  async onMempoolSwap(swap: ParsedSwap) {
     // Handle detected mempool swap.
     // Check if it affects any of our pools
     // Could trigger re-quote or alert
@@ -79,11 +87,7 @@ export default class PricingEngine {
     console.log(`Detected swap: ${swap.dex} ${swap.method}`);
     console.log(`${swap.amountIn} → min ${swap.minAmountOut}`);
     console.log(` Slippage tolerance: ${swap.slippageTolerance}`);
-    this.simulator.simulateSwap(
-      swap.router,
-      { data: "0x", value: swap.amountIn },
-      swap.sender,
-    );
+
     for (const pool of this.pools.values()) {
       if (
         pool.token0.address?.lower === swap.tokenIn?.lower ||

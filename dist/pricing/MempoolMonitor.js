@@ -15,7 +15,6 @@ export default class MempoolMonitor {
         "0x5ae401dc": ["UniswapV3", "multicall"],
     };
     constructor(wsUrl, callback) {
-        console.log(wsUrl);
         this.provider = new WebSocketProvider(wsUrl);
         this.callback = callback;
     }

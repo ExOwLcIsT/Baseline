@@ -52,7 +52,7 @@ class UniswapV2Pair {
     if (!tokenIn.equals(this.token0) && !tokenIn.equals(this.token1))
       throw new Error("Invalid token");
 
-    const direction = tokenIn.name === this.token0.name;
+    const direction = tokenIn.equals(this.token0);
     const amountInWithFee = amountIn * BigInt(10000 - this.feeBPS);
     //Reserve that is increased (with counted fee)
     const reserveIn = direction ? this.reserve0 : this.reserve1;
@@ -101,10 +101,11 @@ class UniswapV2Pair {
     if (!tokenIn.equals(this.token0) && !tokenIn.equals(this.token1))
       throw new Error("Invalid token");
 
-    const direction = tokenIn.name === this.token0.name;
+    const direction = tokenIn.equals(this.token0);
     const num = direction
       ? Number(this.reserve0) / Number(this.token0.decimals)
       : Number(this.reserve1) / Number(this.token1.decimals);
+
     const denum = direction
       ? Number(this.reserve1) / Number(this.token1.decimals)
       : Number(this.reserve0) / Number(this.token0.decimals);
@@ -117,6 +118,7 @@ class UniswapV2Pair {
       */
     if (!tokenIn.equals(this.token0) && !tokenIn.equals(this.token1))
       throw new Error("Invalid token");
+    const amountInNumber = Number(amountIn) / Number(tokenIn.decimals);
     const amountOut =
       Number(this.getAmountOut(amountIn, tokenIn)) /
       Number(
@@ -124,7 +126,7 @@ class UniswapV2Pair {
           ? this.token1.decimals
           : this.token0.decimals,
       );
-    const executionPrice = Number(amountIn) / amountOut;
+    const executionPrice = amountInNumber / amountOut;
     return executionPrice;
   }
 
@@ -212,9 +214,17 @@ class UniswapV2Pair {
     // -------------------
     // build tokens
     // -------------------
-    const token0 = new Token(symbol0, BigInt(10) ** BigInt(decimals0), addr0);
+    const token0 = new Token(
+      symbol0,
+      BigInt(10) ** BigInt(decimals0),
+      Address.fromString(addr0),
+    );
 
-    const token1 = new Token(symbol1, BigInt(10) ** BigInt(decimals1), addr1);
+    const token1 = new Token(
+      symbol1,
+      BigInt(10) ** BigInt(decimals1),
+      Address.fromString(addr1),
+    );
     // -------------------
     // return pair
     // -------------------

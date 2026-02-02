@@ -50,6 +50,7 @@ class RouteFinder {
       }
 
       const neighbors = this.graph.get(current.name);
+
       if (!neighbors) return;
 
       for (const { pool, token } of neighbors) {
@@ -74,12 +75,12 @@ class RouteFinder {
     return routes;
   }
   convertToOutputToken(gasWei: bigint, tokenOut: Token): bigint {
-    if (tokenOut.name === "ETH") return gasWei;
+    if (tokenOut.name === "WETH") return gasWei;
 
     const pool = this.pools.find(
       (p) =>
-        (p.token0.name === "ETH" && p.token1.equals(tokenOut)) ||
-        (p.token1.name === "ETH" && p.token0.equals(tokenOut)),
+        (p.token0.name === "WETH" && p.token1.equals(tokenOut)) ||
+        (p.token1.name === "WETH" && p.token0.equals(tokenOut)),
     );
 
     if (!pool) {
@@ -87,12 +88,12 @@ class RouteFinder {
     }
 
     const ethToken = new Token(
-      "ETH",
+      "WETH",
       10n ** 18n,
       Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
     );
 
-    // simulate swap of gasWei ETH → tokenOut
+    // simulate swap of gasWei WETH → tokenOut
     return pool.getAmountOut(gasWei, ethToken);
   }
   findBestRoute(
@@ -109,13 +110,13 @@ class RouteFinder {
     const routes = this.findAllRoutes(tokenIn, tokenOut, maxHops);
 
     let bestRoute: Route | undefined = undefined;
-    let bestNetOutput = BigInt(0);
-
+    let bestNetOutput = 0n;
     routes.forEach((route) => {
       const grossOutput = route.getOutput(amountIn);
       const gasCost = route.estimateGas() * gasPriceGwei * BigInt(1000000000);
       const gasCostInOutputToken = this.convertToOutputToken(gasCost, tokenOut);
       const netOutput = grossOutput - gasCostInOutputToken;
+      console.log(netOutput);
       if (netOutput > bestNetOutput) {
         bestNetOutput = netOutput;
         bestRoute = route;

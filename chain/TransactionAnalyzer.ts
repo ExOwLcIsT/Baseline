@@ -80,7 +80,7 @@ async function main() {
         18,
         ".",
       ).toString() +
-      " ETH",
+      " WETH",
   );
 
   console.log("\n");

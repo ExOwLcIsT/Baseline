@@ -59,7 +59,7 @@ async function main() {
     console.log("To: " + response?.to);
     console.log("Value: " +
         TokenAmount.fromRaw(response?.value ? response?.value : BigInt(0), 18, ".").toString() +
-        " ETH");
+        " WETH");
     console.log("\n");
     console.log("Gas Analysis");
     console.log("-".repeat(10));
