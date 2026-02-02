@@ -7,7 +7,7 @@ describe("AMM", () => {
   const USDCToken = new Token(
     "USDC",
     10n ** 6n,
-    Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+    Address.fromString("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"),
   );
   const ETHToken = new Token(
     "ETH",
@@ -25,6 +25,7 @@ describe("AMM", () => {
     );
 
     const usdcIn = 2000n * 10n ** 6n;
+    console.log("Here");
     const ethOut = pair.getAmountOut(usdcIn, USDCToken);
 
     // Should get slightly less than 1 ETH due to fee + impact
@@ -47,8 +48,7 @@ describe("AMM", () => {
     const usdcOut = pair.getAmountOut(ethIn, ETHToken);
 
     // Should get slightly less than 1 ETH due to fee + impact
-    expect(usdcOut).toBeLessThan(199 * 10 ** 6);
-    expect(usdcOut).toBeGreaterThanOrEqual(198.783196 * 10 ** 6);
+    expect(usdcOut).toBe(198783196n);
   });
   test("test integer math no floats", () => {
     // Verify no floating point used

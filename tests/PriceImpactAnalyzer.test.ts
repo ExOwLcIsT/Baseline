@@ -20,8 +20,8 @@ describe("PriceImpactAnalyzer", () => {
   const pair = new UniswapV2Pair(
     ETHToken,
     USDCToken,
-    BigInt(1000 * 10 ** 18), //# 1000 ETH
-    BigInt(2_000_000 * 10 ** 6), // 2M USDC
+    1000n * 10n ** 18n, //# 1000 ETH
+    2_000_000n * 10n ** 6n, // 2M USDC
   );
 
   const analyzer = new PriceImpactAnalyzer(pair);
@@ -41,12 +41,15 @@ describe("PriceImpactAnalyzer", () => {
       const row = rows[i];
 
       // amounts
-      expect(row.amountIn).toBe(amountIn);
+      expect(row.amountIn).toBe(amountIn / 10n ** 6n);
+
       expect(row.amountOut).toBe(pair.getAmountOut(amountIn, USDCToken));
 
       // prices (numeric equality)
       expect(row.spotPrice).toBe(pair.getSpotPrice(USDCToken));
-      expect(row.executionPrice).toBe(pair.getExecutionPrice(amountIn, USDCToken));
+      expect(row.executionPrice).toBe(
+        pair.getExecutionPrice(amountIn, USDCToken),
+      );
       expect(row.priceImpactPct).toBe(pair.getPriceImpact(amountIn, USDCToken));
     }
   });
@@ -56,7 +59,6 @@ describe("PriceImpactAnalyzer", () => {
     const maxSize = analyzer.findMaxSizeForImpact(USDCToken, maxImpactPct);
 
     // Impact at returned size must be <= threshold
-    console.log(maxSize);
     const impactAtMax = pair.getPriceImpact(maxSize, USDCToken);
     expect(impactAtMax).toBeLessThanOrEqual(maxImpactPct);
 
@@ -78,7 +80,13 @@ describe("PriceImpactAnalyzer", () => {
     expect(result.gasCostInOutputToken).toBeGreaterThanOrEqual(0);
 
     // netOutput should be strictly less than gross output (converted to token units) when gas > 0
-    const grossOutputTokenUnits = Number(result.grossOutput) / Number(pair.token0 === USDCToken ? pair.token0.decimals : pair.token1.decimals);
+    const grossOutputTokenUnits =
+      Number(result.grossOutput) /
+      Number(
+        pair.token0.equals(USDCToken)
+          ? pair.token0.decimals
+          : pair.token1.decimals,
+      );
     expect(result.netOutput).toBeLessThanOrEqual(grossOutputTokenUnits);
 
     expect(result.effectivePrice).toBeGreaterThan(0);

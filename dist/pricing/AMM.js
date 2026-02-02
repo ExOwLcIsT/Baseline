@@ -55,18 +55,14 @@ class UniswapV2Pair {
             throw new Error("Invalid token");
         const direction = tokenOut.equals(this.token0);
         //Reserve that is increased (with counted fee)
-        const reserveIn = direction
-            ? Number(this.reserve1) / Number(this.token1.decimals)
-            : Number(this.reserve0) / Number(this.token0.decimals);
+        const reserveIn = direction ? this.reserve1 : this.reserve0;
         //Reserve that is decreased
-        const reserveOut = direction
-            ? Number(this.reserve0 - amountOut) / Number(this.token0.decimals)
-            : Number(this.reserve1 - amountOut) / Number(this.token1.decimals);
-        const numenator = (reserveIn * 10000 * Number(amountOut)) / Number(tokenOut.decimals);
+        const reserveOut = direction ? this.reserve0 : this.reserve1;
+        const numenator = reserveIn * 10000n * amountOut;
         const denumenator = reserveOut;
         const amountInWithFee = numenator / denumenator;
-        const amountIn = amountInWithFee / (10000 - this.feeBPS);
-        return Math.ceil(amountIn);
+        const amountIn = amountInWithFee / BigInt(10000 - this.feeBPS);
+        return amountIn;
     }
     getSpotPrice(tokenIn) {
         /*
