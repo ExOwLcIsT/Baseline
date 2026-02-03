@@ -70,7 +70,6 @@ describe("AMM", () => {
       USDCToken,
       ETHToken,
       1000n * 10n ** 300n,
-
       2_000_000n * 10n ** 288n,
     );
     // Should not raise or lose precision

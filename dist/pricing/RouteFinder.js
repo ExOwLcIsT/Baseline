@@ -53,16 +53,19 @@ class RouteFinder {
         return routes;
     }
     convertToOutputToken(gasWei, tokenOut) {
-        if (tokenOut.name === "WETH")
+        if (tokenOut.address.checksum === "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")
             return gasWei;
-        const pool = this.pools.find((p) => (p.token0.name === "WETH" && p.token1.equals(tokenOut)) ||
-            (p.token1.name === "WETH" && p.token0.equals(tokenOut)));
-        if (!pool) {
-            throw new Error("No ETH→tokenOut pool for gas conversion");
-        }
         const ethToken = new Token("WETH", 10n ** 18n, Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"));
+        const routes = this.findAllRoutes(ethToken, tokenOut, 5);
+        let minGas = routes[0].getOutput(gasWei);
+        for (let i = 1; i < routes.length; i++) {
+            const out = routes[i].getOutput(gasWei);
+            if (out < minGas) {
+                minGas = out;
+            }
+        }
         // simulate swap of gasWei WETH → tokenOut
-        return pool.getAmountOut(gasWei, ethToken);
+        return minGas;
     }
     findBestRoute(tokenIn, tokenOut, amountIn, gasPriceGwei, maxHops = 3) {
         /*

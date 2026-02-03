@@ -40,6 +40,7 @@ export default class PricingEngine {
             Get best quote for a swap.
             */
         const [route, netOutput] = this.router.findBestRoute(tokenIn, tokenOut, amountIn, gasPriceGwei);
+        console.log(route);
         // Verify with simulation
         const simResult = await this.simulator.simulateRoute(route, amountIn, sender);
         if (!simResult.success) {

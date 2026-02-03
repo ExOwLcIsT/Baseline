@@ -8,7 +8,8 @@ source .env
 set +a
 anvil \
     --fork-url "$INFURA_RPC_URL" \
-    --fork-block-number 10172711 \
+    --hardfork london \
+    --fork-block-number 11000000 \
     --port 8545 \
     --accounts 10 \
     --balance 10000

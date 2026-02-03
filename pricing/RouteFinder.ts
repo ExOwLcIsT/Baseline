@@ -75,26 +75,25 @@ class RouteFinder {
     return routes;
   }
   convertToOutputToken(gasWei: bigint, tokenOut: Token): bigint {
-    if (tokenOut.name === "WETH") return gasWei;
-
-    const pool = this.pools.find(
-      (p) =>
-        (p.token0.name === "WETH" && p.token1.equals(tokenOut)) ||
-        (p.token1.name === "WETH" && p.token0.equals(tokenOut)),
-    );
-
-    if (!pool) {
-      throw new Error("No ETH→tokenOut pool for gas conversion");
-    }
-
+    if (
+      tokenOut.address.checksum === "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+    )
+      return gasWei;
     const ethToken = new Token(
       "WETH",
       10n ** 18n,
       Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
     );
-
+    const routes = this.findAllRoutes(ethToken, tokenOut, 5);
+    let minGas = routes[0].getOutput(gasWei);
+    for (let i = 1; i < routes.length; i++) {
+      const out = routes[i].getOutput(gasWei);
+      if (out < minGas) {
+        minGas = out;
+      }
+    }
     // simulate swap of gasWei WETH → tokenOut
-    return pool.getAmountOut(gasWei, ethToken);
+    return minGas;
   }
   findBestRoute(
     tokenIn: Token,
@@ -108,11 +107,11 @@ class RouteFinder {
         Returns (best_route, net_output).
         */
     const routes = this.findAllRoutes(tokenIn, tokenOut, maxHops);
-
     let bestRoute: Route | undefined = undefined;
     let bestNetOutput = 0n;
     routes.forEach((route) => {
       const grossOutput = route.getOutput(amountIn);
+
       const gasCost = route.estimateGas() * gasPriceGwei * BigInt(1000000000);
       const gasCostInOutputToken = this.convertToOutputToken(gasCost, tokenOut);
       const netOutput = grossOutput - gasCostInOutputToken;

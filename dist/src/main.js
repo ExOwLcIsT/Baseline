@@ -2,10 +2,10 @@ import WalletManager from "../core/WalletManager.js";
 import * as dotenv from "dotenv";
 import * as secp from "@noble/secp256k1";
 import { createHash, createHmac } from "crypto";
-import { Address } from "../core/BaseTypes/Address.js";
 import Token from "../pricing/Token.js";
+import { Address } from "../core/BaseTypes/Address.js";
 import ChainClient from "../chain/ChainClient.js";
-import UniswapV2Pair from "../pricing/AMM.js";
+import PricingEngine from "../pricing/PricingEngine.js";
 dotenv.config();
 // Hashes configuration
 secp.hashes.sha256 = (msg) => createHash("sha256").update(msg).digest();
@@ -25,11 +25,7 @@ const cc = new ChainClient();
 const USDCToken = new Token("USDC", 10n ** 6n, Address.fromString("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"));
 const ETHToken = new Token("WETH", 10n ** 18n, Address.fromString("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"));
 const USDToken = new Token("USDT", 10n ** 6n, Address.fromString("0xdAC17F958D2ee523a2206206994597C13D831ec7"));
-// const SHIB = new Token(
-//   "SHIB",
-//   10n ** 18n,
-//   Address.fromString("0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"),
-// );
+const SHIB = new Token("SHIB", 10n ** 18n, Address.fromString("0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"));
 // const uni = new UniswapV2Pair(
 //   ETHToken,
 //   USDCToken,
@@ -84,12 +80,19 @@ const USDToken = new Token("USDT", 10n ** 6n, Address.fromString("0xdAC17F958D2e
 //   console.log(` Slippage tolerance: ${swap.slippageTolerance}`);
 // });
 // await monitor.start();
-//
-const pair = new UniswapV2Pair(ETHToken, USDCToken, 1000n * 10n ** 18n, 2000000n * 10n ** 6n);
-const usdcIn = 2000000000n;
-console.log("Here");
-const ethOut = pair.getAmountOut(usdcIn, USDCToken);
-console.log(ethOut);
-const inam = pair.getAmountIn(ethOut, ETHToken);
-console.log(inam);
-console.log(pair.getAmountOut(inam, USDCToken));
+const engine = new PricingEngine(cc, "http://127.0.0.1:8545", process.env["INFURA_WS_RPC"]);
+await engine.loadPools([
+    Address.fromString("0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"), // WETH/USDC
+    //Address.fromString("0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852"),
+    Address.fromString("0x3041cbd36888becc7bbcbc0045e3b1f144466f5f"), // USDC/USDT
+]);
+// const quote = await engine.getQuote(
+//   ETHToken,
+//   USDCToken,
+//   1_000_000_000_000n,
+//   0n,
+//   Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
+// );
+const quote = await engine.getQuote(ETHToken, USDToken, 1000000000000n, 0n, Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"));
+console.log(quote);
+//engine.monitor.start();
