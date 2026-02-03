@@ -5,7 +5,7 @@ import { createHash, createHmac } from "crypto";
 import { Address } from "../core/BaseTypes/Address.js";
 import Token from "../pricing/Token.js";
 import ChainClient from "../chain/ChainClient.js";
-import PricingEngine from "../pricing/PricingEngine.js";
+import UniswapV2Pair from "../pricing/AMM.js";
 dotenv.config();
 // Hashes configuration
 secp.hashes.sha256 = (msg) => createHash("sha256").update(msg).digest();
@@ -84,13 +84,12 @@ const USDToken = new Token("USDT", 10n ** 6n, Address.fromString("0xdAC17F958D2e
 //   console.log(` Slippage tolerance: ${swap.slippageTolerance}`);
 // });
 // await monitor.start();
-const engine = new PricingEngine(cc, "http://127.0.0.1:8545", process.env["INFURA_WS_RPC"]);
-await engine.loadPools([
-    Address.fromString("0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"),
-    Address.fromString("0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852"),
-]);
-let quote = await engine.getQuote(ETHToken, USDCToken, 1000000000000n, 0n, Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"));
-console.log(quote);
-quote = await engine.getQuote(USDCToken, USDToken, 10n * USDCToken.decimals, 0n, Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"));
-console.log(quote);
-//engine.monitor.start();
+//
+const pair = new UniswapV2Pair(ETHToken, USDCToken, 1000n * 10n ** 18n, 2000000n * 10n ** 6n);
+const usdcIn = 2000000000n;
+console.log("Here");
+const ethOut = pair.getAmountOut(usdcIn, USDCToken);
+console.log(ethOut);
+const inam = pair.getAmountIn(ethOut, ETHToken);
+console.log(inam);
+console.log(pair.getAmountOut(inam, USDCToken));

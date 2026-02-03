@@ -60,7 +60,6 @@ class UniswapV2Pair {
     const numenator = reserveOut * amountInWithFee;
     const denumenator = reserveIn * 10000n + amountInWithFee;
     const amountOut = numenator / denumenator;
-
     return amountOut;
   }
   getAmountIn(amountOut: bigint, tokenOut: Token): bigint {
@@ -79,10 +78,10 @@ class UniswapV2Pair {
     const reserveOut = direction ? this.reserve0 : this.reserve1;
 
     const numenator = reserveIn * 10000n * amountOut;
-    const denumenator = reserveOut;
+    const denumenator = reserveOut - amountOut;
 
     const amountInWithFee = numenator / denumenator;
-    const amountIn = amountInWithFee / BigInt(10000 - this.feeBPS);
+    const amountIn = amountInWithFee / BigInt(10000 - this.feeBPS) + 1n;
 
     return amountIn;
   }

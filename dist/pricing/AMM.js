@@ -59,9 +59,9 @@ class UniswapV2Pair {
         //Reserve that is decreased
         const reserveOut = direction ? this.reserve0 : this.reserve1;
         const numenator = reserveIn * 10000n * amountOut;
-        const denumenator = reserveOut;
+        const denumenator = reserveOut - amountOut;
         const amountInWithFee = numenator / denumenator;
-        const amountIn = amountInWithFee / BigInt(10000 - this.feeBPS);
+        const amountIn = amountInWithFee / BigInt(10000 - this.feeBPS) + 1n;
         return amountIn;
     }
     getSpotPrice(tokenIn) {

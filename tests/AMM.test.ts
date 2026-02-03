@@ -25,12 +25,9 @@ describe("AMM", () => {
     );
 
     const usdcIn = 2000n * 10n ** 6n;
-    console.log("Here");
     const ethOut = pair.getAmountOut(usdcIn, USDCToken);
 
-    // Should get slightly less than 1 ETH due to fee + impact
-    expect(ethOut).toBeLessThan(1 * 10 ** 18);
-    expect(ethOut).toBeGreaterThan(0.99 * 10 ** 18);
+    expect(ethOut).toBe(996006981039903216n);
   });
 
   test("amountOut matches solidity", () => {
@@ -50,19 +47,37 @@ describe("AMM", () => {
     // Should get slightly less than 1 ETH due to fee + impact
     expect(usdcOut).toBe(198783196n);
   });
+
+  test("get amount in", ()=>
+  {
+    const pair = new UniswapV2Pair(
+      ETHToken,
+      USDCToken,
+      BigInt(1000 * 10 ** 18), //# 1000 ETH
+      BigInt(2_000_000 * 10 ** 6), // 2M USDC
+    );
+
+    const ethOut = 996006981039903216n;
+    const usdcIn = pair.getAmountIn(ethOut, ETHToken);
+
+    expect(usdcIn).toBe(2000n * 10n ** 6n);
+  })
+
   test("test integer math no floats", () => {
     // Verify no floating point used
     // Large numbers that would lose precision with float
     const pair = new UniswapV2Pair(
       USDCToken,
       ETHToken,
-      BigInt(10 ** 30),
-      BigInt(10 ** 30),
+      1000n * 10n ** 300n,
+
+      2_000_000n * 10n ** 288n,
     );
     // Should not raise or lose precision
-    const out = pair.getAmountOut(10n ** 25n, USDCToken);
-    expect(typeof out).toBe("bigint");
-    expect(out > 0n).toBe(true);
+
+    const usdcIn = BigInt(Number.MAX_SAFE_INTEGER) * 10n ** 6n;
+    const out = pair.getAmountOut(usdcIn, USDCToken);
+    expect(out).toBe(17960355313953n);
   });
   test("swap is immutable", () => {
     //simulate_swap doesn't modify original
