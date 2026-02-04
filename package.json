@@ -24,6 +24,8 @@
   "dependencies": {
     "@noble/hashes": "^1.8.0",
     "@noble/secp256k1": "^3.0.0",
+    "ccxt": "^4.5.36",
+    "decimal.js": "^10.6.0",
     "dotenv": "^17.2.3",
     "ethers": "^6.16.0",
     "husky": "^9.1.7",
