@@ -35,8 +35,45 @@ export default class ExchangeClient {
     }
   }
 
-  private callAPI() {
+  async callAPI<T>(
+    name: string,
+    weight: number,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    if (!this.rateLimiter.canRequest(weight)) {
+      throw "Request blocked";
+    }
+    this.rateLimiter.record(weight);
+    const start = Date.now();
+    try {
+      const res = await fn();
 
+      console.log(`[EXCHANGE] ${name} ok (${Date.now() - start}ms)`);
+
+      return res;
+    } catch (err: any) {
+      console.error(`[EXCHANGE] ${name} failed`, err?.message);
+
+      if (
+        err instanceof ccxt.NetworkError ||
+        err instanceof ccxt.ExchangeNotAvailable
+      ) {
+        throw new Error(`Network error: ${err.message}`);
+      }
+
+      if (err instanceof ccxt.AuthenticationError) {
+        throw new Error(`Auth error: ${err.message}`);
+      }
+
+      if (
+        err instanceof ccxt.RateLimitExceeded ||
+        err?.message?.includes("429")
+      ) {
+        console.log("RateLimitExceeded");
+      }
+
+      throw err;
+    }
   }
 
   async fetchOrderBook(
@@ -46,7 +83,9 @@ export default class ExchangeClient {
     /*
         Fetch L2 order book snapshot.
         */
-    const cctxOrderBook = await this.exchange.fetchOrderBook(symbol, limit);
+    const cctxOrderBook = await this.callAPI("fetchOrderBook", 1, () =>
+      this.exchange.fetchOrderBook(symbol, limit),
+    );
     const orderBook = new OrderBook(
       symbol,
       Number(cctxOrderBook.timestamp),
@@ -70,7 +109,9 @@ export default class ExchangeClient {
 
         Must filter out zero-balance assets.
         */
-    const balances = await this.exchange.fetchBalance();
+    const balances = await this.callAPI("fetchBalance", 1, () =>
+      this.exchange.fetchBalance(),
+    );
     const nonZero: {
       [id: string]: { free: Decimal; total: Decimal; used: Decimal };
     } = {};
@@ -117,14 +158,10 @@ export default class ExchangeClient {
 
         Must handle: partial fills, rejection, and exchange errors.
         */
-    const cctxOrder = await this.exchange.createLimitOrder(
-      symbol,
-      side,
-      amount,
-      price,
-      {
+    const cctxOrder = await this.callAPI("createLimitOrder", 1, () =>
+      this.exchange.createLimitOrder(symbol, side, amount, price, {
         timeInForce: "IOC",
-      },
+      }),
     );
     const order = new Order(cctxOrder);
     return order;
@@ -138,23 +175,25 @@ export default class ExchangeClient {
         Place a market order. Same return format as create_limit_ioc_order.
         Use sparingly — LIMIT IOC is preferred for arb.
         */
-    const cctxOrder = await this.exchange.createMarketOrder(
-      symbol,
-      side,
-      amount,
+    const cctxOrder = await this.callAPI("createMarketOrder", 1, () =>
+      this.exchange.createMarketOrder(symbol, side, amount),
     );
     const order = new Order(cctxOrder);
     return order;
   }
   async cancelOrder(orderId: string, symbol: string): Promise<Order> {
     // Cancel an open order. Returns order status after cancel."""
-    const cctxOrder = await this.exchange.cancelOrder(orderId, symbol);
+    const cctxOrder = await this.callAPI("cancelOrder", 1, () =>
+      this.exchange.cancelOrder(orderId, symbol),
+    );
     const order = new Order(cctxOrder);
     return order;
   }
   async fetchOrderStatus(orderId: string, symbol: string): Promise<string> {
     // Check current status of an order."""
-    const orderStatus = await this.exchange.fetchOrderStatus(orderId, symbol);
+    const orderStatus = await this.callAPI("fetchOrderStatus", 1, () =>
+      this.exchange.fetchOrderStatus(orderId, symbol),
+    );
     return orderStatus;
   }
   async getTradingFees(symbol: string): Promise<TradingFees | undefined> {
@@ -162,12 +201,12 @@ export default class ExchangeClient {
         Returns fee structure:
         {'maker': Decimal('0.001'), 'taker': Decimal('0.001')}
         */
-    const fees = await this.exchange.fetchTradingFees(symbol);
+    const fees = await this.callAPI("fetchTradingFees", 1, () =>
+      this.exchange.fetchTradingFees(symbol),
+    );
     return fees;
   }
 }
-//TODO
-//Implement to client
 class RateLimiter {
   window: [number, number][];
   maxWeight: number;
@@ -179,7 +218,7 @@ class RateLimiter {
   canRequest(weight = 1): boolean {
     const now = Date.now() / 1000;
     // Remove entries older than 60s
-    while (this.window && this.window[0][0] < now - 60) {
+    while (this.window.length && this.window[0][0] < now - 60) {
       this.window.shift();
     }
     const currentWeight = this.window.reduce(

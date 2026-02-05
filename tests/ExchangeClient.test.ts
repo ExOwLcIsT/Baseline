@@ -65,6 +65,6 @@ describe("ExchangeClient", () => {
   });
 
   test("Requests blocked when weight limit reached", () => {
-    //TODO
+    
   });
 });

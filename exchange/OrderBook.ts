@@ -9,6 +9,7 @@ export default class OrderBook {
   bestBid: [Decimal, Decimal];
   bestAsk: [Decimal, Decimal];
   midPrice: Decimal;
+  spread: Decimal;
   spreadBps: Decimal;
   /**
    *
@@ -32,8 +33,11 @@ export default class OrderBook {
       .map((value) => [new Decimal(value[0]), new Decimal(value[1])]);
     this.bestBid = this.bids[0];
     this.bestAsk = this.asks[0];
-    this.midPrice = (this.bestBid[0].add(this.bestAsk[0])).div(2);
-    const spread = this.bestAsk[0].sub(this.bestBid[0]);
-    this.spreadBps = spread.div(this.midPrice).mul(10_000);
+    this.midPrice = this.bestBid[0].add(this.bestAsk[0]).div(2);
+    this.spread = this.bestAsk[0].sub(this.bestBid[0]).toDecimalPlaces(2);
+    this.spreadBps = this.spread
+      .div(this.midPrice)
+      .mul(10_000)
+      .toDecimalPlaces(2);
   }
 }

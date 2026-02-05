@@ -66,7 +66,10 @@ export default class OrderBookAnalyzer {
     qtyLeft = Decimal.max(qtyLeft, 0);
     const avgPrice = totalCost.div(qty.sub(qtyLeft));
     const slippage = avgPrice.sub(bestOrder[0]);
-    const slippageBps = slippage.div(bestOrder[0]).mul(10_000);
+    const slippageBps = slippage
+      .div(bestOrder[0])
+      .mul(10_000)
+      .toDecimalPlaces(2);
     const result = {
       avgPrice,
       totalCost, // In quote currency
@@ -155,6 +158,6 @@ export default class OrderBookAnalyzer {
 
     const spread = new Decimal(buy.avgPrice.sub(sell.avgPrice));
 
-    return spread.div(this.orderBook.midPrice).mul(10_000);
+    return spread.div(this.orderBook.midPrice).mul(10_000).toDecimalPlaces(2);
   }
 }
