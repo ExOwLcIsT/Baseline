@@ -1,12 +1,14 @@
-import ccxt, { Order, TradingFees } from "ccxt";
+import ccxt, { Exchange, TradingFees } from "ccxt";
+import Order from "./Order.js";
 import OrderBook from "./OrderBook.js";
-//import Decimal from "decimal.js";
+import { Decimal } from "decimal.js";
 export default class ExchangeClient {
   /*
     Wrapper around ccxt for Binance testnet.
     Handles rate limiting, error handling, and response normalization.
     */
-  exchange;
+  exchange: Exchange;
+  rateLimiter: RateLimiter;
   private constructor(config: any) {
     /*
         Initialize with config dict containing apiKey, secret, sandbox flag.
@@ -20,6 +22,7 @@ export default class ExchangeClient {
       options: config.options,
       enableRateLimit: config.enableRateLimit,
     });
+    this.rateLimiter = new RateLimiter();
   }
 
   static async fromConfig(config: any): Promise<ExchangeClient> {
@@ -30,6 +33,10 @@ export default class ExchangeClient {
     } catch (error) {
       throw error;
     }
+  }
+
+  private callAPI() {
+
   }
 
   async fetchOrderBook(
@@ -49,7 +56,7 @@ export default class ExchangeClient {
     return orderBook;
   }
   async fetchBalance(): Promise<{
-    [id: string]: { free: number; total: number; used: number };
+    [id: string]: { free: Decimal; total: Decimal; used: Decimal };
   }> {
     /*
         Fetch account balances.
@@ -65,19 +72,19 @@ export default class ExchangeClient {
         */
     const balances = await this.exchange.fetchBalance();
     const nonZero: {
-      [id: string]: { free: number; total: number; used: number };
+      [id: string]: { free: Decimal; total: Decimal; used: Decimal };
     } = {};
     const keys: string[] = Object.keys(balances);
     for (let i = 0; i < keys.length; i++) {
       const balance = balances[keys[i]];
       if (!balance) continue;
 
-      if (balance.free === 0 || isNaN(Number(balance.free))) continue;
+      if (balance.total === 0 || isNaN(Number(balance.total))) continue;
 
       nonZero[keys[i]] = {
-        free: Number(balance.free),
-        total: Number(balance.total),
-        used: Number(balance.used),
+        free: new Decimal(Number(balance.free)),
+        total: new Decimal(Number(balance.total)),
+        used: new Decimal(Number(balance.used)),
       };
     }
     return nonZero;
@@ -110,7 +117,7 @@ export default class ExchangeClient {
 
         Must handle: partial fills, rejection, and exchange errors.
         */
-    const order = await this.exchange.createLimitOrder(
+    const cctxOrder = await this.exchange.createLimitOrder(
       symbol,
       side,
       amount,
@@ -119,6 +126,7 @@ export default class ExchangeClient {
         timeInForce: "IOC",
       },
     );
+    const order = new Order(cctxOrder);
     return order;
   }
   async createMarketOrder(
@@ -130,12 +138,18 @@ export default class ExchangeClient {
         Place a market order. Same return format as create_limit_ioc_order.
         Use sparingly — LIMIT IOC is preferred for arb.
         */
-    const Order = await this.exchange.createMarketOrder(symbol, side, amount);
-    return Order;
+    const cctxOrder = await this.exchange.createMarketOrder(
+      symbol,
+      side,
+      amount,
+    );
+    const order = new Order(cctxOrder);
+    return order;
   }
   async cancelOrder(orderId: string, symbol: string): Promise<Order> {
     // Cancel an open order. Returns order status after cancel."""
-    const order = await this.exchange.cancelOrder(orderId, symbol);
+    const cctxOrder = await this.exchange.cancelOrder(orderId, symbol);
+    const order = new Order(cctxOrder);
     return order;
   }
   async fetchOrderStatus(orderId: string, symbol: string): Promise<string> {
@@ -143,12 +157,38 @@ export default class ExchangeClient {
     const orderStatus = await this.exchange.fetchOrderStatus(orderId, symbol);
     return orderStatus;
   }
-  async getTradingFees(symbol: string): Promise<TradingFees> {
+  async getTradingFees(symbol: string): Promise<TradingFees | undefined> {
     /*
         Returns fee structure:
         {'maker': Decimal('0.001'), 'taker': Decimal('0.001')}
         */
     const fees = await this.exchange.fetchTradingFees(symbol);
     return fees;
+  }
+}
+//TODO
+//Implement to client
+class RateLimiter {
+  window: [number, number][];
+  maxWeight: number;
+  constructor(maxWeightPerMin: number = 5000) {
+    // 5000, not 6000 — safety margin
+    this.window = []; // (timestamp, weight) pairs
+    this.maxWeight = maxWeightPerMin;
+  }
+  canRequest(weight = 1): boolean {
+    const now = Date.now() / 1000;
+    // Remove entries older than 60s
+    while (this.window && this.window[0][0] < now - 60) {
+      this.window.shift();
+    }
+    const currentWeight = this.window.reduce(
+      (sum, pair) => (sum += pair[1]),
+      0,
+    );
+    return currentWeight + weight <= this.maxWeight;
+  }
+  record(weight = 1) {
+    this.window.push([Date.now() / 1000, weight]);
   }
 }

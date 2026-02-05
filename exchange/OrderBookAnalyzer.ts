@@ -1,3 +1,4 @@
+import { Decimal } from "decimal.js";
 import OrderBook from "./OrderBook.js";
 
 export default class OrderBookAnalyzer {
@@ -14,14 +15,14 @@ export default class OrderBookAnalyzer {
 
   walkTheBook(
     side: "buy" | "sell", // "buy" (walk asks) or "sell" (walk bids)
-    qty: number, // Amount of base asset
+    qty: Decimal, // Amount of base asset
   ): {
-    avgPrice: number;
-    totalCost: number; // In quote currency
-    slippageBps: number; // vs best price
+    avgPrice: Decimal;
+    totalCost: Decimal; // In quote currency
+    slippageBps: Decimal; // vs best price
     levelsConsumed: number; // How deep we went
     fullyFilled: boolean;
-    fills: { price: number; qty: number; cost: number }[];
+    fills: { price: Decimal; qty: Decimal; cost: Decimal }[];
   } {
     /*
         Simulate filling `qty` against the order book.
@@ -46,31 +47,32 @@ export default class OrderBookAnalyzer {
     const bestOrder =
       side === "buy" ? this.orderBook.bestAsk : this.orderBook.bestBid;
     let levels = 0;
-    let totalCost = 0;
+    let totalCost = new Decimal(0);
     let qtyLeft = qty;
-    const fills: { price: number; qty: number; cost: number }[] = [];
-    for (; levels < road.length && qtyLeft > 0; levels++) {
+    const fills: { price: Decimal; qty: Decimal; cost: Decimal }[] = [];
+    for (; levels < road.length && qtyLeft.gt(0); levels++) {
       const orderPrice = road[levels][0];
       const orderQty = road[levels][1];
-      const cost = orderPrice * Math.min(orderQty, qtyLeft);
+
+      const cost = orderPrice.mul(Decimal.min(orderQty, qtyLeft));
       fills.push({
         price: orderPrice,
-        qty: Math.min(orderQty, qtyLeft),
+        qty: Decimal.min(orderQty, qtyLeft),
         cost: cost,
       });
-      totalCost += cost;
-      qtyLeft -= orderQty;
+      totalCost = totalCost.add(cost);
+      qtyLeft = qtyLeft.sub(orderQty);
     }
-    qtyLeft = Math.max(qtyLeft, 0);
-    const avgPrice = totalCost / (qty - qtyLeft);
-    const slippage = avgPrice - bestOrder[0];
-    const slippageBps = (slippage / bestOrder[0]) * 10_000;
+    qtyLeft = Decimal.max(qtyLeft, 0);
+    const avgPrice = totalCost.div(qty.sub(qtyLeft));
+    const slippage = avgPrice.sub(bestOrder[0]);
+    const slippageBps = slippage.div(bestOrder[0]).mul(10_000);
     const result = {
       avgPrice,
       totalCost, // In quote currency
       slippageBps, // vs best price
       levelsConsumed: levels + 1, // How deep we went
-      fullyFilled: qtyLeft <= 0,
+      fullyFilled: qtyLeft.lte(0),
       fills: fills,
     };
     return result;
@@ -79,7 +81,7 @@ export default class OrderBookAnalyzer {
   depthAtBps(
     side: "bid" | "ask", // "bid" or "ask"
     bps: number, // How deep (e.g., 10 = within 10 bps of best)
-  ): number {
+  ): Decimal {
     /*
           Total quantity available within `bps` basis points of best price.
           Measures how much you can trade without moving price beyond threshold.
@@ -90,17 +92,17 @@ export default class OrderBookAnalyzer {
 
     const book = side === "bid" ? this.orderBook.bids : this.orderBook.asks;
 
-    if (!book.length) return 0;
+    if (!book.length) return new Decimal(0);
 
     const best = book[0][0];
 
     // price limits
     const limit =
       side === "bid"
-        ? best * (1 - bps / 10_000) // bids go down
-        : best * (1 + bps / 10_000); // asks go up
+        ? best.mul(1 - bps / 10_000) // bids go down
+        : best.mul(1 + bps / 10_000); // asks go up
 
-    let totalQty = 0;
+    let totalQty = new Decimal(0);
 
     for (const [price, qty] of book) {
       if (side === "bid") {
@@ -109,7 +111,7 @@ export default class OrderBookAnalyzer {
         if (price > limit) break;
       }
 
-      totalQty += qty;
+      totalQty = totalQty.add(qty);
     }
 
     return totalQty;
@@ -124,19 +126,19 @@ export default class OrderBookAnalyzer {
           */
     const bidVolume = this.orderBook.bids
       .slice(0, levels)
-      .reduce((partialSum, a) => partialSum + a[1], 0);
+      .reduce((partialSum, a) => partialSum.add(a[1]), new Decimal(0));
     const askVolume = this.orderBook.asks
       .slice(0, levels)
-      .reduce((partialSum, a) => partialSum + a[1], 0);
+      .reduce((partialSum, a) => partialSum.add(a[1]), new Decimal(0));
 
-    const total = bidVolume + askVolume;
-    if (total === 0) return 0.0;
+    const total = bidVolume.add(askVolume);
+    if (total.eq(0)) return 0.0;
 
-    const imbalance = (bidVolume - askVolume) / total;
+    const imbalance = bidVolume.sub(askVolume).div(total).toNumber();
     return imbalance;
   }
 
-  effectiveSpread(qty: number): number {
+  effectiveSpread(qty: Decimal): Decimal {
     /*
           Effective spread for a round-trip of size `qty`.
           = (avg_ask_fill - avg_bid_fill) / mid_price * 10000 (bps)
@@ -147,13 +149,12 @@ export default class OrderBookAnalyzer {
     const buy = this.walkTheBook("buy", qty);
     const sell = this.walkTheBook("sell", qty);
 
-    // if either side can't fully fill, spread is undefined
     if (!buy.fullyFilled || !sell.fullyFilled) {
-      return Infinity;
+      return new Decimal(Infinity);
     }
 
-    const spread = buy.avgPrice - sell.avgPrice;
+    const spread = new Decimal(buy.avgPrice.sub(sell.avgPrice));
 
-    return (spread / this.orderBook.midPrice) * 10_000;
+    return spread.div(this.orderBook.midPrice).mul(10_000);
   }
 }

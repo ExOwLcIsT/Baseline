@@ -5,6 +5,7 @@ import { createHash, createHmac } from "crypto";
 import ExchangeClient from "../exchange/ExchangeClient.js";
 import OrderBookAnalyzer from "../exchange/OrderBookAnalyzer.js";
 import { BINANCE_CONFIG } from "../configs/Binance_config.js";
+import { Decimal } from "decimal.js";
 dotenv.config();
 // Hashes configuration
 export function initCrypto() {
@@ -126,7 +127,6 @@ initCrypto();
 //engine.monitor.start();
 const cl = await ExchangeClient.fromConfig(BINANCE_CONFIG);
 const book = await cl.fetchOrderBook("ETH/USDT");
-console.log(book);
 const analyzer = new OrderBookAnalyzer(book);
-console.log(analyzer.walkTheBook("buy", 110));
-console.log(analyzer.imbalance());
+console.log(analyzer.walkTheBook("buy", new Decimal(110)));
+console.log(await cl.fetchBalance());

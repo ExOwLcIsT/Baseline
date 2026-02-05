@@ -1,14 +1,15 @@
 import { Num } from "ccxt";
+import { Decimal } from "decimal.js";
 
 export default class OrderBook {
   symbol: string;
   timestamp: number;
-  bids: [number, number][];
-  asks: [number, number][];
-  bestBid: [number, number];
-  bestAsk: [number, number];
-  midPrice: number;
-  spreadBps: number;
+  bids: [Decimal, Decimal][];
+  asks: [Decimal, Decimal][];
+  bestBid: [Decimal, Decimal];
+  bestAsk: [Decimal, Decimal];
+  midPrice: Decimal;
+  spreadBps: Decimal;
   /**
    *
    */
@@ -23,14 +24,16 @@ export default class OrderBook {
 
     this.bids = bids
       .map((value) => [Number(value[0]), Number(value[1])] as [number, number])
-      .sort((a, b) => b[0] - a[0]);
+      .sort((a, b) => b[0] - a[0])
+      .map((value) => [new Decimal(value[0]), new Decimal(value[1])]);
     this.asks = asks
       .map((value) => [Number(value[0]), Number(value[1])] as [number, number])
-      .sort((a, b) => a[0] - b[0]);
+      .sort((a, b) => a[0] - b[0])
+      .map((value) => [new Decimal(value[0]), new Decimal(value[1])]);
     this.bestBid = this.bids[0];
     this.bestAsk = this.asks[0];
-    this.midPrice = (this.bestBid[0] + this.bestAsk[0]) / 2;
-    const spread = this.bestAsk[0] - this.bestBid[0];
-    this.spreadBps = (spread / this.midPrice) * 10_000;
+    this.midPrice = (this.bestBid[0].add(this.bestAsk[0])).div(2);
+    const spread = this.bestAsk[0].sub(this.bestBid[0]);
+    this.spreadBps = spread.div(this.midPrice).mul(10_000);
   }
 }
