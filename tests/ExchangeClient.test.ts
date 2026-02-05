@@ -22,8 +22,8 @@ describe("ExchangeClient", () => {
 
   test("Bids sorted highest to lowest.", async () => {
     for (let i = 0; i < book.bids.length - 1; i++) {
-      const [price, qty] = book.bids[i];
-      const [nextPrice, nextQty] = book.bids[i + 1];
+      const [price] = book.bids[i];
+      const [nextPrice] = book.bids[i + 1];
       expect(price.gte(nextPrice)).toBe(true);
     }
   });
@@ -41,8 +41,7 @@ describe("ExchangeClient", () => {
     const bestBid = book.bestBid[0];
     const spread = bestAsk.sub(bestBid);
     const midPrice = bestBid.add(bestAsk).div(2);
-    const spreadBps = spread.div(midPrice).mul(10000);
-    console.log(client.exchange.apiKey);
+    const spreadBps = spread.div(midPrice).mul(10000).toDecimalPlaces(2);
     expect(spreadBps.eq(book.spreadBps)).toBe(true);
   });
 
@@ -65,6 +64,6 @@ describe("ExchangeClient", () => {
   });
 
   test("Requests blocked when weight limit reached", () => {
-    
+
   });
 });

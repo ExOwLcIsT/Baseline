@@ -40,4 +40,5 @@ export default class OrderBook {
       .mul(10_000)
       .toDecimalPlaces(2);
   }
+  
 }

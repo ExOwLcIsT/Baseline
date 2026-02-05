@@ -1,17 +1,73 @@
-// def test_walk_the_book_exact_fill():
-//     """Fill exactly at one price level."""
+import { describe, test, expect, beforeAll } from "vitest";
+import Decimal from "decimal.js";
+import OrderBook from "../exchange/OrderBook";
+import OrderBookAnalyzer from "../exchange/OrderBookAnalyzer";
 
-// def test_walk_the_book_multiple_levels():
-//     """Fill across multiple price levels, avg price correct."""
+describe("OrderBook", () => {
+  let analyzer: OrderBookAnalyzer;
+  beforeAll(() => {
+    const book = new OrderBook(
+      "ETH/USDT",
+      Date.now(),
+      [
+        [99, 5],
+        [100, 5],
+        [98, 5],
+      ],
+      [
+        [102, 5],
+        [101, 5],
+        [103, 5],
+      ],
+    );
+    analyzer = new OrderBookAnalyzer(book);
+  });
 
-// def test_walk_the_book_insufficient_liquidity():
-//     """Returns fully_filled=False when book is too thin."""
+  test("test_walk_the_book_exact_fill", () => {
+    const res = analyzer.walkTheBook("buy", new Decimal(5));
 
-// def test_depth_at_bps_correct():
-//     """Depth at 10 bps matches manual calculation."""
+    expect(res.fullyFilled).toBe(true);
+    expect(res.levelsConsumed).toBe(2);
+    expect(res.avgPrice.eq(101)).toBe(true);
+    expect(res.totalCost.eq(505)).toBe(true);
+  });
 
-// def test_imbalance_range():
-//     """Imbalance always in [-1.0, +1.0]."""
+  test("test_walk_the_book_multiple_levels", () => {
+    const res = analyzer.walkTheBook("buy", new Decimal(8));
 
-// def test_effective_spread_greater_than_quoted():
-//     """Effective spread >= quoted spread for any qty > 0."""
+    const expectedCost = new Decimal(5).mul(101).add(new Decimal(3).mul(102));
+    const expectedAvg = expectedCost.div(8);
+
+    expect(res.fullyFilled).toBe(true);
+    expect(res.avgPrice.eq(expectedAvg)).toBe(true);
+    expect(res.fills.length).toBe(2);
+  });
+
+  test("test_walk_the_book_insufficient_liquidity", () => {
+    const res = analyzer.walkTheBook("buy", new Decimal(20));
+
+    expect(res.fullyFilled).toBe(false);
+    expect(res.totalCost.gt(0)).toBe(true);
+    expect(res.fills.length).toBe(3);
+  });
+
+  test("test_depth_at_bps_correct", () => {
+    const depth = analyzer.depthAtBps("ask", 10);
+
+    expect(depth.eq(5)).toBe(true);
+  });
+
+  test("test_imbalance_range", () => {
+    const imbalance = analyzer.imbalance(3);
+
+    expect(imbalance).toBeGreaterThanOrEqual(-1);
+    expect(imbalance).toBeLessThanOrEqual(1);
+  });
+
+  test("test_effective_spread_greater_than_quoted", () => {
+    const eff = analyzer.effectiveSpread(new Decimal(3));
+    const quoted = analyzer.orderBook.spreadBps;
+
+    expect(eff.greaterThanOrEqualTo(quoted)).toBe(true);
+  });
+});
