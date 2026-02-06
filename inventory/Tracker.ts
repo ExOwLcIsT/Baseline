@@ -27,7 +27,7 @@ export default class InventoryTracker {
     Single source of truth for where your money is.
     */
   balances: Balance[] = [];
-  constructor(venues: Venue[]) {
+  constructor() {
     // Initialize tracker for given venues.
   }
 

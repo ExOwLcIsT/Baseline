@@ -28,6 +28,7 @@
     "decimal.js": "^10.6.0",
     "dotenv": "^17.2.3",
     "ethers": "^6.16.0",
+    "fs": "^0.0.1-security",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.8.0"

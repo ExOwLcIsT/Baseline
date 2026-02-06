@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import InventoryTracker, { Venue } from "./tracker";
+import InventoryTracker, { Venue } from "./Tracker.js";
 
 class TransferPlan {
   //A planned transfer between venues.
@@ -114,21 +114,30 @@ export default class RebalancePlanner {
 
     // Generate transfers: from surplus to deficit
     const transfers: TransferPlan[] = [];
-    const surplus = adjustments.filter((pair) => pair[1].gt(0));
-    const deficit = adjustments.filter((pair) => pair[1].lt(0));
+    const assetMinAmount: Decimal = MIN_OPERATING_BALANCE[asset] ?? Decimal(0);
+    const surplus = adjustments.filter((pair) =>
+      pair[1].sub(assetMinAmount).gt(0),
+    ); // Balances with amount > target (min operated balance taken into account)
+    const deficit = adjustments.filter((pair) => pair[1].lt(0)); // Balances with amount < target
 
     surplus.forEach((surPair) => {
       deficit.forEach((defPair) => {
         if (surPair[1].lte(0) || defPair[1].lte(0)) return;
         const transferAmount = Decimal.min(surPair[1], defPair[1]);
+        const timeMin = TRANSFER_FEES[asset]
+          ? TRANSFER_FEES[asset].estimatedTimeMin
+          : 0;
+        const estimatedFee = TRANSFER_FEES[asset]
+          ? TRANSFER_FEES[asset].withdrawalFee
+          : Decimal(0);
         transfers.push(
           new TransferPlan(
             surPair[0],
             defPair[0],
             asset,
             transferAmount,
-            Decimal(0),
-            0,
+            estimatedFee,
+            timeMin,
           ),
         );
         surPair[1] = surPair[1].sub(transferAmount);
@@ -182,3 +191,38 @@ export default class RebalancePlanner {
     };
   }
 }
+
+const TRANSFER_FEES: {
+  [id: string]: {
+    withdrawalFee: Decimal; // ETH network
+    minWithdrawal: Decimal;
+    confirmations: number;
+    estimatedTimeMin: number;
+  };
+} = {
+  ETH: {
+    withdrawalFee: Decimal("0.005"), // ETH network
+    minWithdrawal: Decimal("0.01"),
+    confirmations: 12,
+    estimatedTimeMin: 15,
+  },
+  USDT: {
+    withdrawalFee: Decimal("1.0"), // ERC-20
+    minWithdrawal: Decimal("10.0"),
+    confirmations: 12,
+    estimatedTimeMin: 15,
+  },
+  USDC: {
+    withdrawalFee: Decimal("1.0"),
+    minWithdrawal: Decimal("10.0"),
+    confirmations: 12,
+    estimatedTimeMin: 15,
+  },
+};
+
+const MIN_OPERATING_BALANCE: { [id: string]: Decimal } = {
+  // Keep at least this much at each venue to continue trading
+  ETH: Decimal("0.5"),
+  USDT: Decimal("500"),
+  USDC: Decimal("500"),
+};
