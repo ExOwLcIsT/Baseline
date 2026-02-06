@@ -2,6 +2,7 @@ import ccxt, { Exchange, TradingFees } from "ccxt";
 import Order from "./Order.js";
 import OrderBook from "./OrderBook.js";
 import { Decimal } from "decimal.js";
+import RateLimiter from "./RateLimiter.js";
 export default class ExchangeClient {
   /*
     Wrapper around ccxt for Binance testnet.
@@ -35,19 +36,17 @@ export default class ExchangeClient {
     }
   }
 
-  async callAPI<T>(
-    name: string,
-    weight: number,
-    fn: () => Promise<T>,
-  ): Promise<T> {
-    if (!this.rateLimiter.canRequest(weight)) {
+  async callAPI<T>(name: string, fn: () => Promise<T>): Promise<T> {
+    if (!this.rateLimiter.canRequest()) {
       throw "Request blocked";
     }
-    this.rateLimiter.record(weight);
+    let weight = 0;
     const start = Date.now();
     try {
       const res = await fn();
-
+      weight = Number(
+        this.exchange.last_response_headers["X-Mbx-Used-Weight-1m"],
+      );
       console.log(`[EXCHANGE] ${name} ok (${Date.now() - start}ms)`);
 
       return res;
@@ -71,8 +70,9 @@ export default class ExchangeClient {
       ) {
         console.log("RateLimitExceeded");
       }
-
       throw err;
+    } finally {
+      this.rateLimiter.record(weight);
     }
   }
 
@@ -83,7 +83,7 @@ export default class ExchangeClient {
     /*
         Fetch L2 order book snapshot.
         */
-    const cctxOrderBook = await this.callAPI("fetchOrderBook", 1, () =>
+    const cctxOrderBook = await this.callAPI("fetchOrderBook", () =>
       this.exchange.fetchOrderBook(symbol, limit),
     );
     const orderBook = new OrderBook(
@@ -95,7 +95,7 @@ export default class ExchangeClient {
     return orderBook;
   }
   async fetchBalance(): Promise<{
-    [id: string]: { free: Decimal; total: Decimal; used: Decimal };
+    [id: string]: { free: Decimal;  used: Decimal };
   }> {
     /*
         Fetch account balances.
@@ -109,11 +109,11 @@ export default class ExchangeClient {
 
         Must filter out zero-balance assets.
         */
-    const balances = await this.callAPI("fetchBalance", 1, () =>
+    const balances = await this.callAPI("fetchBalance", () =>
       this.exchange.fetchBalance(),
     );
     const nonZero: {
-      [id: string]: { free: Decimal; total: Decimal; used: Decimal };
+      [id: string]: { free: Decimal; used: Decimal };
     } = {};
     const keys: string[] = Object.keys(balances);
     for (let i = 0; i < keys.length; i++) {
@@ -124,7 +124,6 @@ export default class ExchangeClient {
 
       nonZero[keys[i]] = {
         free: new Decimal(Number(balance.free)),
-        total: new Decimal(Number(balance.total)),
         used: new Decimal(Number(balance.used)),
       };
     }
@@ -158,7 +157,7 @@ export default class ExchangeClient {
 
         Must handle: partial fills, rejection, and exchange errors.
         */
-    const cctxOrder = await this.callAPI("createLimitOrder", 1, () =>
+    const cctxOrder = await this.callAPI("createLimitOrder", () =>
       this.exchange.createLimitOrder(symbol, side, amount, price, {
         timeInForce: "IOC",
       }),
@@ -175,7 +174,7 @@ export default class ExchangeClient {
         Place a market order. Same return format as create_limit_ioc_order.
         Use sparingly — LIMIT IOC is preferred for arb.
         */
-    const cctxOrder = await this.callAPI("createMarketOrder", 1, () =>
+    const cctxOrder = await this.callAPI("createMarketOrder", () =>
       this.exchange.createMarketOrder(symbol, side, amount),
     );
     const order = new Order(cctxOrder);
@@ -183,7 +182,7 @@ export default class ExchangeClient {
   }
   async cancelOrder(orderId: string, symbol: string): Promise<Order> {
     // Cancel an open order. Returns order status after cancel."""
-    const cctxOrder = await this.callAPI("cancelOrder", 1, () =>
+    const cctxOrder = await this.callAPI("cancelOrder", () =>
       this.exchange.cancelOrder(orderId, symbol),
     );
     const order = new Order(cctxOrder);
@@ -191,7 +190,7 @@ export default class ExchangeClient {
   }
   async fetchOrderStatus(orderId: string, symbol: string): Promise<string> {
     // Check current status of an order."""
-    const orderStatus = await this.callAPI("fetchOrderStatus", 1, () =>
+    const orderStatus = await this.callAPI("fetchOrderStatus", () =>
       this.exchange.fetchOrderStatus(orderId, symbol),
     );
     return orderStatus;
@@ -201,33 +200,9 @@ export default class ExchangeClient {
         Returns fee structure:
         {'maker': Decimal('0.001'), 'taker': Decimal('0.001')}
         */
-    const fees = await this.callAPI("fetchTradingFees", 1, () =>
+    const fees = await this.callAPI("fetchTradingFees", () =>
       this.exchange.fetchTradingFees(symbol),
     );
     return fees;
-  }
-}
-class RateLimiter {
-  window: [number, number][];
-  maxWeight: number;
-  constructor(maxWeightPerMin: number = 5000) {
-    // 5000, not 6000 — safety margin
-    this.window = []; // (timestamp, weight) pairs
-    this.maxWeight = maxWeightPerMin;
-  }
-  canRequest(weight = 1): boolean {
-    const now = Date.now() / 1000;
-    // Remove entries older than 60s
-    while (this.window.length && this.window[0][0] < now - 60) {
-      this.window.shift();
-    }
-    const currentWeight = this.window.reduce(
-      (sum, pair) => (sum += pair[1]),
-      0,
-    );
-    return currentWeight + weight <= this.maxWeight;
-  }
-  record(weight = 1) {
-    this.window.push([Date.now() / 1000, weight]);
   }
 }

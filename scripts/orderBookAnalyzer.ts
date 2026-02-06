@@ -1,6 +1,6 @@
 import { Decimal } from "decimal.js";
 import { BINANCE_CONFIG } from "../configs/Binance_config.js";
-import ExchangeClient from "../exchange/ExchangeClient.js";
+import  ExchangeClient  from "../exchange/ExchangeClient.js";
 import OrderBookAnalyzer from "../exchange/OrderBookAnalyzer.js";
 
 function parseArg(flag: string): string | undefined {

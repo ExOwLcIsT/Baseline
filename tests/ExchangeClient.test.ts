@@ -3,13 +3,14 @@ import { BINANCE_CONFIG } from "../configs/Binance_config";
 import { describe, expect, test, beforeAll } from "vitest";
 import { Decimal } from "decimal.js";
 import OrderBook from "../exchange/OrderBook";
+import RateLimiter from "../exchange/RateLimiter";
+
 describe("ExchangeClient", () => {
   let client: ExchangeClient;
   let book: OrderBook;
   let assets: {
     [id: string]: {
       free: Decimal;
-      total: Decimal;
       used: Decimal;
     };
   };
@@ -47,14 +48,14 @@ describe("ExchangeClient", () => {
 
   test("Zero-balance assets excluded from result", async () => {
     for (const asset in assets) {
-      expect(assets[asset].total.greaterThan(0)).toBe(true);
+      expect(assets[asset].free.greaterThan(0) || assets[asset].used.greaterThan(0)).toBe(true);
     }
   });
 
   test("IOC order returns fill qty, avg price, fees", async () => {
     const order = await client.createLimitIocOrder(
       "ETH/USDT",
-      "buy",
+      "sell",
       0.5,
       2100.5,
     );
@@ -64,6 +65,10 @@ describe("ExchangeClient", () => {
   });
 
   test("Requests blocked when weight limit reached", () => {
+    const rateLimiter = new RateLimiter(10);
 
+    rateLimiter.record(10);
+
+    expect(rateLimiter.canRequest()).toBe(false);
   });
 });
