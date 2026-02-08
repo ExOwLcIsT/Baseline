@@ -95,7 +95,7 @@ export default class ExchangeClient {
     return orderBook;
   }
   async fetchBalance(): Promise<{
-    [id: string]: { free: Decimal;  used: Decimal };
+    [id: string]: { free: Decimal; used: Decimal };
   }> {
     /*
         Fetch account balances.

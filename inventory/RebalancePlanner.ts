@@ -42,10 +42,11 @@ export default class RebalancePlanner {
   constructor(
     tracker: InventoryTracker,
     thresholdPct: number = 30.0, // Rebalance when deviation > 30%
-    targetRatio: Record<Venue, number>, // Default: equal split
+    targetRatio?: Record<Venue, number>, // Default: equal split
   ) {
     this.tracker = tracker;
     this.thresholdPct = thresholdPct;
+    if (!targetRatio) targetRatio = { binance: 0.5, wallet: 0.5 };
     this.targetRatio = targetRatio;
   }
 
@@ -72,7 +73,7 @@ export default class RebalancePlanner {
     this.tracker.balances.forEach((b) => {
       const asset = b.asset;
       if (checked.find((b) => b.asset === asset) == undefined) {
-        const res = this.tracker.skew(asset);
+        const res = this.tracker.skew(asset, this.thresholdPct);
         checked.push({
           asset,
           maxDeviationPtc: res.maxDeviationPct,
@@ -96,7 +97,7 @@ export default class RebalancePlanner {
       Returns list of TransferPlan objects.
       Empty list if no rebalance needed.
       */
-    const res = this.tracker.skew(asset);
+    const res = this.tracker.skew(asset, this.thresholdPct);
     if (!res.needsRebalance) return [];
 
     const assetbalances = this.tracker.balances.filter((b) => b.asset == asset);
@@ -105,7 +106,6 @@ export default class RebalancePlanner {
       Decimal(0),
     );
     const target = total.div(assetbalances.length);
-
     // Calculate surplus/deficit per venue
     const adjustments: [Venue, Decimal][] = [];
     assetbalances.forEach((b) => {
@@ -119,11 +119,10 @@ export default class RebalancePlanner {
       pair[1].sub(assetMinAmount).gt(0),
     ); // Balances with amount > target (min operated balance taken into account)
     const deficit = adjustments.filter((pair) => pair[1].lt(0)); // Balances with amount < target
-
     surplus.forEach((surPair) => {
       deficit.forEach((defPair) => {
-        if (surPair[1].lte(0) || defPair[1].lte(0)) return;
-        const transferAmount = Decimal.min(surPair[1], defPair[1]);
+        if (surPair[1].lte(0) || defPair[1].gte(0)) return;
+        const transferAmount = Decimal.min(surPair[1], Decimal.abs(defPair[1]));
         const timeMin = TRANSFER_FEES[asset]
           ? TRANSFER_FEES[asset].estimatedTimeMin
           : 0;
@@ -167,7 +166,7 @@ export default class RebalancePlanner {
   estimateCost(plans: TransferPlan[]): {
     totalTransfers: number;
     totalFeesUsd: Decimal;
-    totalTimeMin: number; // Max of all transfer times (parallel)
+    totalTimeMin: number; 
     assetsAffected: string[];
   } {
     /*
@@ -181,12 +180,16 @@ export default class RebalancePlanner {
           'assetsAffected': list[str],
       }
       */
-    const totalTimeMin = plans.reduce((sum, t) => sum + t.estimatedTimeMin, 0);
+    const totalTimeMin = plans.reduce((maxTime, t) => Math.max(maxTime ,t.estimatedTimeMin), 0);
+    const totalFeesUsd = plans.reduce(
+      (sum, t) => sum.add(t.estimatedFee),
+      Decimal(0),
+    );
     const assetsAffected = [...new Set(plans.map((t) => t.asset))];
     return {
       totalTransfers: plans.length,
-      totalFeesUsd: Decimal(0),
-      totalTimeMin, // Max of all transfer times (parallel)
+      totalFeesUsd,
+      totalTimeMin, 
       assetsAffected,
     };
   }

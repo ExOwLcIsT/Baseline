@@ -1,7 +1,7 @@
 import { Decimal } from "decimal.js";
 import { Venue } from "./Tracker.js";
 import * as fs from "fs";
-class TradeLeg {
+export class TradeLeg {
   // Single execution leg.
   id: string;
   timestamp: Date;
@@ -35,7 +35,7 @@ class TradeLeg {
   }
 }
 
-class ArbRecord {
+export class ArbRecord {
   // Complete arb trade with both legs.
   id: string;
   timestamp: Date;
@@ -101,7 +101,7 @@ export default class PnLEngine {
     this.trades.push(trade);
   }
 
-  summary(trades?: ArbRecord[]): {
+  summary(): {
     totalTrades: number;
     totalPnlUsd?: Decimal;
     totalFeesUsd?: Decimal;
@@ -132,31 +132,35 @@ export default class PnLEngine {
             'pnl_by_hour': dict,         # {hour: total_pnl}
         }
         */
-    if (!trades) trades = [...this.trades];
-    if (trades.length === 0) return { totalTrades: 0 };
 
-    const pnls = trades.map((t) => t.netPnl);
+    if (this.trades.length === 0) return { totalTrades: 0 };
+
+    const pnls = this.trades.map((t) => t.netPnl);
     const winning = pnls.filter((p) => p.gt(0));
     const losing = pnls.filter((p) => p.lte(0));
     const totalPnl = pnls.reduce((sum, p) => p.add(sum), Decimal(0));
     const avgPnlPerTrade = totalPnl.div(pnls.length);
-    const avgPnlBps = trades
+    const avgPnlBps = this.trades
       .map((t) => t.netPnlBps)
       .reduce((sum, p) => sum.add(p), Decimal(0))
-      .div(trades.length);
+      .div(this.trades.length);
     const bestTradePnl = pnls.sort()[pnls.length - 1];
     const worstTradePnl = pnls.sort()[0];
-    const totalNotional = trades.reduce(
+    const totalNotional = this.trades.reduce(
       (sum, t) => sum.add(t.notional),
       Decimal(0),
     );
+    const totalFeesUsd = this.trades.reduce(
+      (sum, t) => sum.add(t.gasCostUsd),
+      Decimal(0),
+    );
     return {
-      totalTrades: trades.length,
-      totalPnlUsd: Decimal(0),
-      totalFeesUsd: Decimal(0),
+      totalTrades: this.trades.length,
+      totalPnlUsd: totalPnl,
+      totalFeesUsd,
       avgPnlPerTrade,
       avgPnlBps,
-      winRate: winning.length / trades.length,
+      winRate: Math.round((winning.length / pnls.length) * 10000) / 100,
       bestTradePnl,
       worstTradePnl,
       totalNotional,
@@ -172,7 +176,15 @@ export default class PnLEngine {
         */
     const len = this.trades.length;
     if (len < n) throw new Error("Not enough trades recorder");
-    return this.summary(this.trades.slice(len - n, len - 1));
+    const lastTrades = this.trades
+      .sort((a, b) => (b.timestamp > a.timestamp ? 1 : -1))
+      .slice(0, n);
+    console.log("Last trades:");
+    lastTrades.forEach((lt) => {
+      console.log(
+        `${lt.timestamp.toLocaleTimeString()} ${lt.buyLeg.symbol} Buy ${lt.buyLeg.venue} / Sell ${lt.sellLeg.venue} $${lt.netPnl.toDecimalPlaces(2)} (${lt.netPnlBps.toDecimalPlaces(2)} bps) ${lt.netPnl.gt(0) ? "✅" : "❌"}`,
+      );
+    });
   }
 
   export_csv(filepath: string): void {

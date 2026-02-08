@@ -1,6 +1,6 @@
 import { Decimal } from "decimal.js";
 import { BINANCE_CONFIG } from "../configs/Binance_config.js";
-import  ExchangeClient  from "../exchange/ExchangeClient.js";
+import ExchangeClient from "../exchange/ExchangeClient.js";
 import OrderBookAnalyzer from "../exchange/OrderBookAnalyzer.js";
 
 function parseArg(flag: string): string | undefined {
@@ -23,25 +23,37 @@ async function main() {
       (!isNaN(orderBook.timestamp) ? orderBook.timestamp : today.toISOString()),
   );
   console.log("=".repeat(65));
-
+  const asset = symbol.split("/")[0];
   console.log(
-    "Best Bid: " + orderBook.bestBid[0] + " x " + orderBook.bestBid[1],
+    "Best Bid: $" +
+      orderBook.bestBid[0] +
+      " x " +
+      orderBook.bestBid[1] +
+      " " +
+      asset,
   );
   console.log(
-    "Best Ask: " + orderBook.bestAsk[0] + " x " + orderBook.bestAsk[1],
+    "Best Ask: $" +
+      orderBook.bestAsk[0] +
+      " x " +
+      orderBook.bestAsk[1] +
+      " " +
+      asset,
   );
-  console.log("Mid Price: " + orderBook.midPrice);
+  console.log("Mid Price: $" + orderBook.midPrice);
   console.log(
-    "Spread:    " + orderBook.spread + ` (${orderBook.spreadBps}bps)`,
+    "Spread:    $" + orderBook.spread + ` (${orderBook.spreadBps}bps)`,
   );
 
   console.log("=".repeat(65));
 
   console.log("Depth (within 10 bps):");
   const bids = analyzer.depthAtBps("bid", 10);
-  console.log(`    Bids: ${bids}`);
+  const bidsCost = analyzer.walkTheBook("sell", bids);
+  console.log(`    Bids: ${bids} ${asset} ($${bidsCost.totalCost})`);
   const asks = analyzer.depthAtBps("bid", 10);
-  console.log(`    Asks: ${asks}`);
+  const asksCost = analyzer.walkTheBook("buy", bids);
+  console.log(`    Asks: ${asks}  ${asset} ($${asksCost.totalCost})`);
   const imbalance = analyzer.imbalance(10);
   console.log(
     `Imbalance: ${imbalance} (${imbalance === 0 ? "no" : "slight " + (imbalance > 0 ? "bid" : "ask")} pressure)`,
@@ -52,14 +64,14 @@ async function main() {
   console.log("BUY 2");
   const buy2 = analyzer.walkTheBook("buy", new Decimal(2));
 
-  console.log(`Avg price:  ${buy2.avgPrice}`);
+  console.log(`Avg price:  $${buy2.avgPrice}`);
   console.log(`Slippage:   ${buy2.slippageBps} bps`);
   console.log(`Levels:     ${buy2.levelsConsumed}`);
 
   console.log("BUY 10");
   const buy10 = analyzer.walkTheBook("buy", new Decimal(10));
 
-  console.log(`Avg price:  ${buy10.avgPrice}`);
+  console.log(`Avg price:  $${buy10.avgPrice}`);
   console.log(`Slippage:   ${buy10.slippageBps} bps`);
   console.log(`Levels:     ${buy10.levelsConsumed}`);
 

@@ -4,6 +4,9 @@ export enum Venue {
   WALLET = "wallet", // On-chain wallet (DEX venue)
 }
 
+const PRICES = {
+  ETH: Decimal(2010),
+};
 class Balance {
   venue: Venue;
   asset: string;
@@ -62,7 +65,7 @@ export default class InventoryTracker {
     }
   }
 
-  updateFromWallet(venue: Venue, balances: { [id: string]: number }) {
+  updateFromWallet(venue: Venue, balances: { [id: string]: Decimal }) {
     /*
         Update balances from on-chain wallet query.
 
@@ -74,7 +77,11 @@ export default class InventoryTracker {
       const bal = this.balances.find(
         (b) => b.venue === venue && b.asset === asset,
       );
-      if (!bal) continue;
+      if (!bal) {
+        const newBal = new Balance(venue, asset, balances[asset], Decimal(0));
+        this.balances.push(newBal);
+        continue;
+      }
       bal.free = Decimal(balances[asset]);
       bal.used = Decimal(0);
     }
@@ -130,10 +137,21 @@ export default class InventoryTracker {
       timestamp,
       venues,
       totals,
-      totalUsd: Decimal(0),
+      totalUsd: this.netUsdValue(PRICES),
     };
   }
-
+  netUsdValue(prices: { [id: string]: Decimal }): Decimal {
+    // Total portfolio value in USD.
+    let total = Decimal("0");
+    this.balances.forEach((b) => {
+      if (b.asset === "USDT" || b.asset === "USDC") {
+        total = total.add(b.total);
+      } else if (b.asset in prices) {
+        total = total.add(b.total.mul(prices[b.asset]));
+      }
+    });
+    return total;
+  }
   getAvailable(venue: Venue, asset: string): Decimal {
     /*
       How much of `asset` is available to trade at `venue`.
@@ -300,7 +318,10 @@ export default class InventoryTracker {
     feeBalance!.free.sub(fee);
   }
 
-  skew(asset: string): {
+  skew(
+    asset: string,
+    thresholdPct: number,
+  ): {
     asset: string;
     total: Decimal;
     venues: {
@@ -330,7 +351,11 @@ export default class InventoryTracker {
       [id: string]: { amount: Decimal; pct: number; deviationPct: number };
     } = {};
     for (const venue in portfolioVenues) {
-      venues[venue].amount = portfolioVenues[venue][asset].free;
+      venues[venue] = {
+        amount: portfolioVenues[venue][asset].free,
+        pct: 0,
+        deviationPct: 0,
+      };
     }
     let total = new Decimal(0);
     for (const v of Object.values(venues)) {
@@ -354,13 +379,13 @@ export default class InventoryTracker {
       const v = venues[key];
 
       const pct = v.amount.div(total).mul(100).toNumber();
-      const deviation = Math.abs(pct - idealPct);
+      const deviation = pct - idealPct;
 
       v.pct = pct;
       v.deviationPct = deviation;
 
-      if (deviation > maxDeviationPct) {
-        maxDeviationPct = deviation;
+      if (Math.abs(deviation) > maxDeviationPct) {
+        maxDeviationPct = Math.abs(deviation);
       }
     }
 
@@ -369,7 +394,7 @@ export default class InventoryTracker {
       total,
       venues,
       maxDeviationPct,
-      needsRebalance: maxDeviationPct > 30,
+      needsRebalance: maxDeviationPct > thresholdPct,
     };
   }
 }
