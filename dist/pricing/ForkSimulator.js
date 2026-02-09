@@ -32,7 +32,7 @@ export default class ForkSimulator {
                 const balance = await weth.balanceOf(await signer.getAddress());
             }
             // Example: wrap 1 ETH
-            await wrapETH("1");
+            await wrapETH("10");
             const data = routerIface.encodeFunctionData("swapExactTokensForTokens", [
                 swapParams.amountIn,
                 swapParams.amountOutMin,
@@ -53,7 +53,7 @@ export default class ForkSimulator {
             const wethApprove = new Contract(swapParams.path[0], ERC20_ABI, signer);
             // Approve the router to spend your WETH
             async function approveRouter() {
-                const tx = await wethApprove.approve(router.checksum, Number.MAX_SAFE_INTEGER);
+                const tx = await wethApprove.approve(router.checksum, swapParams.amountIn);
                 await tx.wait();
             }
             await approveRouter();

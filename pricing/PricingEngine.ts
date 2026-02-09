@@ -57,7 +57,6 @@ export default class PricingEngine {
       amountIn,
       gasPriceGwei,
     );
-    console.log(route);
     // Verify with simulation
     const simResult = await this.simulator.simulateRoute(
       route,

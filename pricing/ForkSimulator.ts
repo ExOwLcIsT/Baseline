@@ -61,7 +61,7 @@ export default class ForkSimulator {
       }
 
       // Example: wrap 1 ETH
-      await wrapETH("1");
+      await wrapETH("10");
 
       const data = routerIface.encodeFunctionData("swapExactTokensForTokens", [
         swapParams.amountIn,
@@ -88,7 +88,7 @@ export default class ForkSimulator {
       async function approveRouter() {
         const tx = await wethApprove.approve(
           router.checksum,
-          Number.MAX_SAFE_INTEGER,
+          swapParams.amountIn,
         );
         await tx.wait();
       }

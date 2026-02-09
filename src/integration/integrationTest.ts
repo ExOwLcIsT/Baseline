@@ -1,11 +1,11 @@
-import WalletManager from "../core/WalletManager.js";
+import WalletManager from "../../core/WalletManager.js";
 import * as dotenv from "dotenv";
 import * as secp from "@noble/secp256k1";
 import { createHash, createHmac } from "crypto";
-import ChainClient from "../chain/ChainClient.js";
-import { Address } from "../core/BaseTypes/Address.js";
-import TokenAmount from "../core/BaseTypes/TokenAmount.js";
-import { CustomTransactionRequest } from "../core/BaseTypes/TransactionRequest.js";
+import ChainClient from "../../chain/ChainClient.js";
+import { Address } from "../../core/BaseTypes/Address.js";
+import TokenAmount from "../../core/BaseTypes/TokenAmount.js";
+import { CustomTransactionRequest } from "../../core/BaseTypes/TransactionRequest.js";
 
 dotenv.config();
 
@@ -55,4 +55,3 @@ const signedTx = await wallet.signTransaction(tx);
 const txHash = await cc.sendTransaction(signedTx);
 
 console.log("Transaction hash: " + txHash);
-
