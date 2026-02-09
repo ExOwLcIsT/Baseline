@@ -10,7 +10,7 @@ class TransferPlan {
   estimatedFee: Decimal; // Withdrawal/gas fee
   estimatedTimeMin: number; // Minutes to complete
 
-  netAmount(): Decimal {
+  get netAmount(): Decimal {
     //Amount received after fees.
     return this.amount.sub(this.estimatedFee);
   }

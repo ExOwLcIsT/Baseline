@@ -108,7 +108,6 @@ export default class ArbChecker {
       uniSwapPair.token0.name === "USDT"
         ? uniSwapPair.token0
         : uniSwapPair.token1;
-    console.log("here");
     const dexSellPrice = uniSwapPair.getAmountOut(
       BigInt(size) * ETHToken.decimals,
       ETHToken,

@@ -388,7 +388,6 @@ export default class InventoryTracker {
         maxDeviationPct = Math.abs(deviation);
       }
     }
-
     return {
       asset,
       total,

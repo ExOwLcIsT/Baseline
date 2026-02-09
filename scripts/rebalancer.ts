@@ -1,11 +1,7 @@
 import { Decimal } from "decimal.js";
 import RebalancePlanner from "../inventory/RebalancePlanner.js";
 import InventoryTracker, { Venue } from "../inventory/Tracker.js";
-import { assert } from "node:console";
-function parseArg(flag: string): string | undefined {
-  const arg = process.argv.find((a) => a.startsWith(flag + "="));
-  return arg?.split("=")[1];
-}
+
 const CEX_BALANCES = {
   ETH: {
     free: Decimal(2),
