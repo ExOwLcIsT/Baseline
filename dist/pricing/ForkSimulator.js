@@ -59,17 +59,8 @@ export default class ForkSimulator {
             await approveRouter();
             const gasUsed = await this.provider.estimateGas(tx);
             const result = await this.provider.call(tx);
-            const amountsOutData = quoteIface.encodeFunctionData("getAmountsOut", [
-                swapParams.amountIn,
-                swapParams.path,
-            ]);
-            const raw = await this.provider.call({
-                to: router.checksum,
-                data: amountsOutData,
-            });
             const routerContract = new Contract(router.checksum, quoteIface, this.provider);
             const amounts = await routerContract.getAmountsOut(swapParams.amountIn, swapParams.path);
-            //const [amounts] = quoteIface.decodeFunctionResult("getAmountsOut", raw);
             const amountOut = amounts.at(-1);
             return {
                 success: true,

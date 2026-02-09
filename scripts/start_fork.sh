@@ -9,7 +9,7 @@ set +a
 anvil \
     --fork-url "$INFURA_RPC_URL" \
     --hardfork london \
-    # --fork-block-number 11000000 \
+    #--fork-block-number 11000000 \
     --fork-block-number 24414968 \
     --port 8545 \
     --accounts 10 \

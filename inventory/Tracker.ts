@@ -282,7 +282,7 @@ export default class InventoryTracker {
       side == "buy"
         ? this.canExecute(venue, quoteAsset, quoteAmount, venue, feeAsset, fee)
         : this.canExecute(venue, baseAsset, baseAmount, venue, feeAsset, fee);
-    if (check.canExecute) {
+    if (!check.canExecute) {
       throw new Error(check.reason);
     }
 

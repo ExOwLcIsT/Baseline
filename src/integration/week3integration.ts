@@ -1,5 +1,5 @@
 import ExchangeClient from "../../exchange/ExchangeClient.js";
-import PnLEngine, { ArbRecord, TradeLeg } from "../../inventory/PnL.js";
+import PnLEngine from "../../inventory/PnL.js";
 import InventoryTracker, { Venue } from "../../inventory/Tracker.js";
 import PricingEngine from "../../pricing/PricingEngine.js";
 import { Address } from "../../core/BaseTypes/Address.js";
@@ -124,7 +124,7 @@ export default class ArbChecker {
       Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
     );
     const dexGas = Decimal(
-      uniSwapPair.getAmountOut(dexQuote.gasEstimate, ETHToken),
+      uniSwapPair.getAmountOut(dexQuote.gasEstimate * 10n ** 9n, ETHToken),
     ).div(USDTToken.decimals);
     const book = await this.exchangeClient.fetchOrderBook(pair);
     const analyzer = new OrderBookAnalyzer(book);
@@ -134,15 +134,14 @@ export default class ArbChecker {
     const gap1 = Decimal(
       uniSwapPair.getExecutionPrice(dexSellPrice, USDTToken),
     ).sub(buyWalked.avgPrice);
+
     const gap2 = sellWalked.avgPrice.sub(
       uniSwapPair.getExecutionPrice(dexBuyPrice, USDTToken),
     );
-
     let gapBps = Decimal(0);
     let cexSlippageBps = Decimal(0);
     let dexPriceImpactBps = 0;
     let gasBps = Decimal(0);
-    let arbRecord;
     let inventoryOk = true;
     if (gap1 > gap2) {
       gapBps = gap1.div(buyWalked.avgPrice).mul(10000);
@@ -153,36 +152,7 @@ export default class ArbChecker {
       gasBps = Decimal(dexGas)
         .div(uniSwapPair.getExecutionPrice(dexSellPrice, USDTToken))
         .mul(10000);
-      const buyLeg = new TradeLeg(
-        "1",
-        new Date(),
-        Venue.BINANCE,
-        "ETH/USDT",
-        "buy",
-        Decimal(2),
-        buyWalked.avgPrice,
-        Decimal(0),
-        "USDT",
-      );
 
-      const sellLeg = new TradeLeg(
-        "2",
-        new Date(),
-        Venue.BINANCE,
-        "ETH/USDT",
-        "sell",
-        Decimal(2),
-        Decimal(uniSwapPair.getExecutionPrice(dexSellPrice, USDTToken)),
-        Decimal(0),
-        "USDT",
-      );
-      arbRecord = new ArbRecord(
-        "new",
-        new Date(),
-        buyLeg,
-        sellLeg,
-        Decimal(dexGas),
-      );
       inventoryOk =
         this.inventoryTracker
           .getAvailable(Venue.BINANCE, "USDT")
@@ -198,36 +168,7 @@ export default class ArbChecker {
       gasBps = Decimal(dexGas)
         .div(uniSwapPair.getExecutionPrice(dexBuyPrice, USDTToken))
         .mul(10000);
-      const buyLeg = new TradeLeg(
-        "1",
-        new Date(),
-        Venue.WALLET,
-        "ETH/USDT",
-        "buy",
-        Decimal(2),
-        Decimal(uniSwapPair.getExecutionPrice(dexBuyPrice, USDTToken)),
-        Decimal(0),
-        "USDT",
-      );
 
-      const sellLeg = new TradeLeg(
-        "2",
-        new Date(),
-        Venue.BINANCE,
-        "ETH/USDT",
-        "sell",
-        Decimal(2),
-        sellWalked.avgPrice,
-        Decimal(0),
-        "USDT",
-      );
-      arbRecord = new ArbRecord(
-        "new",
-        new Date(),
-        buyLeg,
-        sellLeg,
-        Decimal(dexGas),
-      );
       inventoryOk =
         this.inventoryTracker
           .getAvailable(Venue.WALLET, "USDT")
@@ -242,9 +183,10 @@ export default class ArbChecker {
     const direction =
       gapBps < estimatedCostsBps
         ? undefined
-        : gap1 > gap2
+        : gap1.gt(gap2)
           ? "buy_cex_sell_dex"
           : "buy_dex_sell_cex";
+
     const executable = gapBps > estimatedCostsBps && inventoryOk;
     return {
       pair,
@@ -255,7 +197,7 @@ export default class ArbChecker {
       gapBps,
       direction,
       estimatedCostsBps,
-      estimatedNetPnlBps: arbRecord.netPnlBps,
+      estimatedNetPnlBps: gapBps.sub(estimatedCostsBps),
       inventoryOk,
       executable, // gap > costs AND inventory available
       details: {
@@ -289,6 +231,10 @@ async function main() {
     pnlEngine,
   );
   const checked = await arbChecker.check("ETH/USDT", size);
+  if (checked.direction === undefined) {
+    console.log("No profitable price gap found");
+    return;
+  }
   console.log(`═`.repeat(65));
   console.log(`ARB CHECK: $ETH/USDT (size: ${size} ETH)`);
   console.log(`═`.repeat(65));
@@ -314,18 +260,18 @@ async function main() {
   }
 
   console.log("Costs:");
-  console.log(`DEX fee:           ${checked.details.dexFeeBps} bps`);
-  console.log(`DEX price impact:   ${checked.details.dexPriceImpactBps} bps`);
-  console.log(`CEX fee:           ${checked.details.cexFeeBps} bps`);
-  console.log(`CEX slippage:       ${checked.details.cexSlippageBps} bps`);
+  console.log(` DEX fee:           ${checked.details.dexFeeBps} bps`);
+  console.log(` DEX price impact:  ${checked.details.dexPriceImpactBps} bps`);
+  console.log(` CEX fee:           ${checked.details.cexFeeBps} bps`);
+  console.log(` CEX slippage:      ${checked.details.cexSlippageBps} bps`);
   console.log(
-    `Gas:               $${checked.details.gasCostUsd} (${checked.details.gasBps.toDecimalPlaces(2)} bps)`,
+    ` Gas:               $${checked.details.gasCostUsd} (${checked.details.gasBps.toDecimalPlaces(2)} bps)`,
   );
   console.log("─".repeat(65));
   console.log(`   Total costs:       ${checked.estimatedCostsBps} bps`);
 
   console.log(
-    `Net PnL estimate: ${checked.estimatedNetPnlBps} bps ${checked.estimatedNetPnlBps.gt(0) ? "✅ Profitable" : "❌ NOT PROFITABLE"}`,
+    `Net PnL estimate: ${checked.estimatedNetPnlBps.toDecimalPlaces(2)} bps ${checked.estimatedNetPnlBps.gt(0) ? "✅ Profitable" : "❌ NOT PROFITABLE"}`,
   );
 
   console.log("Inventory:");
@@ -346,7 +292,7 @@ async function main() {
     );
   }
 
-  // Verdict: SKIP — costs exceed gap
-  // ═══════════════════════════════════════════`);
+  console.log(`Verdict: ${checked.executable ? "Execute" : "SKIP"}`);
+  console.log("═".repeat(65));
 }
 main().catch((err) => console.error(err));
