@@ -108,14 +108,25 @@ export default class ArbChecker {
       uniSwapPair.token0.name === "USDT"
         ? uniSwapPair.token0
         : uniSwapPair.token1;
-    const dexSellPrice = uniSwapPair.getAmountOut(
-      BigInt(size) * ETHToken.decimals,
-      ETHToken,
-    );
     const dexBuyPrice = uniSwapPair.getAmountIn(
       BigInt(size) * ETHToken.decimals,
       ETHToken,
     );
+    const dexSellPriceUsd = Decimal(
+      uniSwapPair
+        .getAmountOut(BigInt(size) * ETHToken.decimals, ETHToken)
+        .toString(),
+    )
+      .div(USDTToken.decimals)
+      .div(size);
+
+    const dexBuyPriceUsd = Decimal(
+      uniSwapPair
+        .getAmountIn(BigInt(size) * ETHToken.decimals, ETHToken)
+        .toString(),
+    )
+      .div(USDTToken.decimals)
+      .div(size);
     const dexQuote = await this.pricingEngine.getQuote(
       ETHToken,
       USDTToken,
@@ -131,13 +142,9 @@ export default class ArbChecker {
     const buyWalked = analyzer.walkTheBook("buy", Decimal(size));
     const sellWalked = analyzer.walkTheBook("sell", Decimal(size));
 
-    const gap1 = Decimal(
-      uniSwapPair.getExecutionPrice(dexSellPrice, USDTToken),
-    ).sub(buyWalked.avgPrice);
+    const gap1 = Decimal(dexSellPriceUsd).sub(buyWalked.avgPrice);
 
-    const gap2 = sellWalked.avgPrice.sub(
-      uniSwapPair.getExecutionPrice(dexBuyPrice, USDTToken),
-    );
+    const gap2 = sellWalked.avgPrice.sub(dexBuyPriceUsd);
     let gapBps = Decimal(0);
     let cexSlippageBps = Decimal(0);
     let dexPriceImpactBps = 0;
@@ -149,9 +156,7 @@ export default class ArbChecker {
       dexPriceImpactBps =
         uniSwapPair.getPriceImpact(BigInt(size) * ETHToken.decimals, ETHToken) /
         100;
-      gasBps = Decimal(dexGas)
-        .div(uniSwapPair.getExecutionPrice(dexSellPrice, USDTToken))
-        .mul(10000);
+      gasBps = Decimal(dexGas).div(dexSellPriceUsd).mul(10000);
 
       inventoryOk =
         this.inventoryTracker
@@ -159,15 +164,15 @@ export default class ArbChecker {
           .gte(buyWalked.totalCost) &&
         this.inventoryTracker.getAvailable(Venue.WALLET, "ETH").gte(size);
     } else {
-      gapBps = gap2
-        .div(uniSwapPair.getExecutionPrice(dexBuyPrice, USDTToken))
-        .mul(10000);
+      console.log(gap2);
+
+      console.log(dexBuyPriceUsd);
+
+      gapBps = gap2.div(dexBuyPriceUsd).mul(10000);
       cexSlippageBps = sellWalked.slippageBps;
       dexPriceImpactBps =
         uniSwapPair.getPriceImpact(dexBuyPrice, USDTToken) / 100;
-      gasBps = Decimal(dexGas)
-        .div(uniSwapPair.getExecutionPrice(dexBuyPrice, USDTToken))
-        .mul(10000);
+      gasBps = Decimal(dexGas).div(dexBuyPriceUsd).mul(10000);
 
       inventoryOk =
         this.inventoryTracker
@@ -191,7 +196,8 @@ export default class ArbChecker {
     return {
       pair,
       timestamp: new Date(),
-      dexPrice: Decimal(uniSwapPair.getExecutionPrice(dexBuyPrice, USDTToken)),
+      dexPrice:
+        direction === "buy_cex_sell_dex" ? dexSellPriceUsd : dexBuyPriceUsd,
       cexBid: sellWalked.avgPrice,
       cexAsk: buyWalked.avgPrice,
       gapBps,
@@ -249,7 +255,7 @@ async function main() {
     console.log(
       `Gap: $${checked.dexPrice.sub(checked.cexAsk).toDecimalPlaces(2)} (${checked.gapBps.toDecimalPlaces(2)} bps)`,
     );
-  } else {
+  } else if (checked.direction === "buy_dex_sell_cex") {
     console.log(
       `   Uniswap V2:      $${checked.dexPrice.toDecimalPlaces(2)} (buy ${size} ETH)`,
     );
@@ -268,7 +274,9 @@ async function main() {
     ` Gas:               $${checked.details.gasCostUsd} (${checked.details.gasBps.toDecimalPlaces(2)} bps)`,
   );
   console.log("─".repeat(65));
-  console.log(`   Total costs:       ${checked.estimatedCostsBps} bps`);
+  console.log(
+    `   Total costs:       ${checked.estimatedCostsBps.toDecimalPlaces(2)} bps`,
+  );
 
   console.log(
     `Net PnL estimate: ${checked.estimatedNetPnlBps.toDecimalPlaces(2)} bps ${checked.estimatedNetPnlBps.gt(0) ? "✅ Profitable" : "❌ NOT PROFITABLE"}`,

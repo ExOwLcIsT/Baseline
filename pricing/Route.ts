@@ -24,6 +24,15 @@ class Route {
 
     return amountOut;
   }
+  getInput(amountOut: bigint): bigint {
+    // Simulate full route, return final output.x
+    let amountIn = amountOut;
+    for (let i = 0; i <= 0; i++) {
+      amountIn = this.pools[i].getAmountIn(amountIn, this.path[i]);
+    }
+
+    return amountIn;
+  }
 
   getIntermediateAmounts(amountIn: bigint): bigint[] {
     //Return amount at each step: [input, after_hop1, after_hop2, ...]

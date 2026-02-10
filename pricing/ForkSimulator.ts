@@ -1,9 +1,7 @@
-import { Contract, formatEther, JsonRpcProvider, parseEther } from "ethers";
+import { Contract, JsonRpcProvider, parseEther } from "ethers";
 import { Address } from "../core/BaseTypes/Address.js";
 
 import { Interface } from "ethers";
-import UniswapV2Pair from "../pricing/AMM.js";
-import Token from "../pricing/Token.js";
 import Route from "../pricing/Route.js";
 
 const routerIface = new Interface([
@@ -57,7 +55,7 @@ export default class ForkSimulator {
         });
         await tx.wait();
 
-        const balance = await weth.balanceOf(await signer.getAddress());
+        //const balance = await weth.balanceOf(await signer.getAddress());
       }
 
       // Example: wrap 1 ETH
@@ -95,7 +93,7 @@ export default class ForkSimulator {
 
       await approveRouter();
       const gasUsed = await this.provider.estimateGas(tx);
-      const result = await this.provider.call(tx);
+      //const result = await this.provider.call(tx);
       const routerContract = new Contract(
         router.checksum,
         quoteIface,
@@ -114,7 +112,7 @@ export default class ForkSimulator {
         error: undefined,
         logs: [],
       };
-    } catch (e: any) {
+    } catch (e:any) {
       return {
         success: false,
         amountOut: 0n,

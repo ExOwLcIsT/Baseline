@@ -10,6 +10,7 @@ import PricingEngine from "../pricing/PricingEngine.js";
 import { Address } from "../core/BaseTypes/Address.js";
 import Token from "../pricing/Token.js";
 import ChainClient from "../chain/ChainClient.js";
+import { Decimal } from "decimal.js";
 dotenv.config();
 // Hashes configuration
 export function initCrypto() {
@@ -43,7 +44,7 @@ const USDToken = new Token("USDT", 10n ** 6n, Address.fromString("0xdAC17F958D2e
 // );
 // const uni = new UniswapV2Pair(
 //   ETHToken,
-//   USDCToken,
+//   USDToken,
 //   BigInt(1000 * 10 ** 18),
 //   BigInt(2000000 * 10 ** 6),
 // );
@@ -121,3 +122,18 @@ console.log(quote);
 // const it = new InventoryTracker();
 // it.updateFromCex(Venue.BINANCE, balance);
 // console.log(it.snapshot());
+const size = Decimal(2.256);
+const sizeDecimals = 10n ** BigInt(size.decimalPlaces());
+const amountIn = BigInt(size.mul(sizeDecimals).toNumber()) *
+    (ETHToken.decimals / sizeDecimals); //Decimal places are not lost during BIGINT convertation
+const simulated = await engine.getQuote(ETHToken, USDToken, amountIn, 1n, Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"));
+const dexBuy = Decimal(simulated.route.getInput(amountIn).toString())
+    .div(USDToken.decimals.toString())
+    .div(size);
+const dexSell = Decimal(simulated.expectedOutput.toString())
+    .div(USDToken.decimals.toString())
+    .div(size);
+console.log({
+    dexBuy: dexBuy,
+    dexSell: dexSell,
+});

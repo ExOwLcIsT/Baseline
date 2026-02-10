@@ -9,7 +9,14 @@ class RouteFinder {
 
   // token.name -> neighbors
   graph: Map<string, Array<{ pool: UniswapV2Pair; token: Token }>>;
-
+  get tokens(): Token[] {
+    const routerTokens: Set<Token> = new Set();
+    this.pools.forEach((pool) => {
+      routerTokens.add(pool.token0);
+      routerTokens.add(pool.token1);
+    });
+    return [...routerTokens];
+  }
   constructor(pools: UniswapV2Pair[]) {
     this.pools = pools;
     this.graph = this.buildGraph();

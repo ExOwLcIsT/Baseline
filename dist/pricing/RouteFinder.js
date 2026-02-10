@@ -6,6 +6,14 @@ class RouteFinder {
     pools;
     // token.name -> neighbors
     graph;
+    get tokens() {
+        const routerTokens = new Set();
+        this.pools.forEach((pool) => {
+            routerTokens.add(pool.token0);
+            routerTokens.add(pool.token1);
+        });
+        return [...routerTokens];
+    }
     constructor(pools) {
         this.pools = pools;
         this.graph = this.buildGraph();

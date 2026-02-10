@@ -55,7 +55,7 @@ const USDToken = new Token(
 
 // const uni = new UniswapV2Pair(
 //   ETHToken,
-//   USDCToken,
+//   USDToken,
 //   BigInt(1000 * 10 ** 18),
 //   BigInt(2000000 * 10 ** 6),
 // );

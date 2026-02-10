@@ -19,6 +19,16 @@ class Route {
         }
         return amountOut;
     }
+    getInput(amountOut) {
+        // Simulate full route, return final output.x
+        let amountIn = amountOut;
+        for (let i = 0; i <= 0; i++) {
+            console.log(this.path[i].name);
+            amountIn = this.pools[i].getAmountIn(amountIn, this.path[i]);
+            console.log(amountIn);
+        }
+        return amountIn;
+    }
     getIntermediateAmounts(amountIn) {
         //Return amount at each step: [input, after_hop1, after_hop2, ...]
         const amounts = [];
