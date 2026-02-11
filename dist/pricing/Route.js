@@ -23,9 +23,7 @@ class Route {
         // Simulate full route, return final output.x
         let amountIn = amountOut;
         for (let i = 0; i <= 0; i++) {
-            console.log(this.path[i].name);
             amountIn = this.pools[i].getAmountIn(amountIn, this.path[i]);
-            console.log(amountIn);
         }
         return amountIn;
     }

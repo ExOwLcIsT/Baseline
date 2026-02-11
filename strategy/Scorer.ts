@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import Signal from "./Signal";
+import Signal from "./Signal.js";
 class ScorerConfig {
   spreadWeight: number = 0.4;
   liquidityWeight: number = 0.2;
@@ -71,7 +71,7 @@ export default class SignalScorer {
     this.recentResults = this.recentResults.slice(-100);
   }
   applyDecay(signal: Signal): number {
-    const age = signal.age_seconds();
+    const age = signal.ageSeconds();
     const ttl = signal.expiry - signal.timestamp;
     const decayFactor = Math.max(0, 1 - (age / ttl) * 0.5);
     return signal.score * decayFactor;

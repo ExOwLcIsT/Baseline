@@ -29,7 +29,7 @@ export default class ForkSimulator {
                     value: parseEther(amountEth),
                 });
                 await tx.wait();
-                const balance = await weth.balanceOf(await signer.getAddress());
+                //const balance = await weth.balanceOf(await signer.getAddress());
             }
             // Example: wrap 1 ETH
             await wrapETH("10");

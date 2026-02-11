@@ -13,6 +13,6 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src", "core", "chain", "scripts", "pricing", "exhange", "inventory"],
+  "include": ["src", "core", "chain", "scripts", "pricing", "exhange", "inventory", "executor", "strategy"],
   "exclude": ["node_modules", "dist"]
 }

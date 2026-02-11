@@ -84,7 +84,7 @@ export default class Signal {
       params,
     );
   }
-  is_valid(): boolean {
+  isValid(): boolean {
     return (
       Date.now() < this.expiry &&
       this.inventoryOk &&
@@ -93,7 +93,7 @@ export default class Signal {
       this.score > 0
     );
   }
-  age_seconds(): number {
+  ageSeconds(): number {
     return Date.now() - this.timestamp;
   }
 }

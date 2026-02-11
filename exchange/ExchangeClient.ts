@@ -133,8 +133,8 @@ export default class ExchangeClient {
   async createLimitIocOrder(
     symbol: string, // "ETH/USDT"
     side: string, // "buy" or "sell"
-    amount: number, // Quantity of base asset
-    price: number, // Limit price
+    amount: Decimal, // Quantity of base asset
+    price: Decimal, // Limit price
   ): Promise<Order> {
     /*
         Place a LIMIT IOC (Immediate Or Cancel) order.
@@ -158,9 +158,15 @@ export default class ExchangeClient {
         Must handle: partial fills, rejection, and exchange errors.
         */
     const cctxOrder = await this.callAPI("createLimitOrder", () =>
-      this.exchange.createLimitOrder(symbol, side, amount, price, {
-        timeInForce: "IOC",
-      }),
+      this.exchange.createLimitOrder(
+        symbol,
+        side,
+        amount.toNumber(),
+        price.toNumber(),
+        {
+          timeInForce: "IOC",
+        },
+      ),
     );
     const order = new Order(cctxOrder);
     return order;

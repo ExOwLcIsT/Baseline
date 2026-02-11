@@ -1,12 +1,12 @@
 import { Decimal } from "decimal.js";
-import FeeStructure from "./Fees";
-import ExchangeClient from "../exchange/ExchangeClient";
-import PricingEngine from "../pricing/PricingEngine";
-import InventoryTracker, { Venue } from "../inventory/Tracker";
-import Signal, { Direction } from "./Signal";
-import OrderBookAnalyzer from "../exchange/OrderBookAnalyzer";
-import Token from "../pricing/Token";
-import { Address } from "../core/BaseTypes/Address";
+import FeeStructure from "./Fees.js";
+import ExchangeClient from "../exchange/ExchangeClient.js";
+import PricingEngine from "../pricing/PricingEngine.js";
+import InventoryTracker, { Venue } from "../inventory/Tracker.js";
+import Signal, { Direction } from "./Signal.js";
+import OrderBookAnalyzer from "../exchange/OrderBookAnalyzer.js";
+import Token from "../pricing/Token.js";
+import { Address } from "../core/BaseTypes/Address.js";
 
 export default class SignalGenerator {
   exchange: ExchangeClient;
