@@ -44,6 +44,7 @@ export default class Signal {
 
   inventoryOk: boolean;
   withinLimits: boolean;
+
   private constructor(
     id: string,
     pair: string,

@@ -15,13 +15,15 @@ export default class SignalScorer {
     this.config = config ?? new ScorerConfig();
     this.recentResults = [];
   }
+
   score(
     signal: Signal,
-    inventoryState: { asset: string; status: string }[],
+    inventoryState: { asset: string; status: boolean }[],
   ): number {
     const scores: { [id: string]: number } = {
       spread: this.scoreSpread(signal.spreadBps),
-      liquidity: 80, // Placeholder
+      liquidity: this.scoreLiquidity(signal.spreadBps),
+
       inventory: this.scoreInventory(signal, inventoryState),
       history: this.scoreHistory(signal.pair),
     };
@@ -33,6 +35,13 @@ export default class SignalScorer {
     }, 0);
     return Math.round(Math.max(0, Math.min(100, weighted)) * 10) / 10;
   }
+  scoreLiquidity(spreadBps: Decimal): number {
+    const slippage = spreadBps.mul(0.1);
+    if (slippage.lt(5)) return 100;
+    else if (slippage.gt(20)) return 0;
+    return 100 - slippage.sub(5).toNumber() * (100 / 15);
+  }
+
   scoreSpread(spreadBps: Decimal): number {
     if (spreadBps.lte(this.config.minSpreadBps)) return 0;
     if (spreadBps.gte(this.config.excellentSpreadBps)) return 100;
@@ -43,13 +52,14 @@ export default class SignalScorer {
       .mul(100)
       .toNumber();
   }
+
   scoreInventory(
     signal: Signal,
-    skews: { asset: string; status: string }[],
+    skews: { asset: string; status: boolean }[],
   ): number {
     const base = signal.pair.split("/")[0];
     const relevant = skews.filter((s) => s.asset == base);
-    if (relevant.some((s) => s.status == "RED")) return 20;
+    if (relevant.some((s) => s.status === true)) return 20; // Assets that need rebalancing exist
     return 60;
   }
   scoreHistory(pair: string): number {

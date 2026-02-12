@@ -3,7 +3,7 @@ import { TokenAmount, TxDict } from "./TokenAmount.js";
 export class CustomTransactionRequest {
   to: Address;
   value: TokenAmount;
-  data: Uint8Array;
+  data: string;
 
   nonce?: number;
   gasLimit?: number;
@@ -15,7 +15,7 @@ export class CustomTransactionRequest {
   constructor(params: {
     to: Address;
     value: TokenAmount;
-    data?: Uint8Array;
+    data?: string;
     nonce?: number;
     gasLimit?: number;
     maxFeePerGas?: bigint;
@@ -24,7 +24,7 @@ export class CustomTransactionRequest {
   }) {
     this.to = params.to;
     this.value = params.value;
-    this.data = params.data ?? new Uint8Array();
+    this.data = params.data ?? "";
 
     this.nonce = params.nonce;
     this.gasLimit = params.gasLimit;
@@ -39,7 +39,7 @@ export class CustomTransactionRequest {
     return {
       to: this.to.checksum,
       value: this.value.raw.toString(),
-      data: Buffer.from(this.data).toString("hex"),
+      data: this.data,
 
       nonce: this.nonce,
       gasLimit: this.gasLimit,

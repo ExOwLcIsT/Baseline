@@ -1,3 +1,4 @@
+import { Decimal } from "decimal.js";
 class Route {
     // Represents a swap route through one or more pools.
     pools;
@@ -26,6 +27,21 @@ class Route {
             amountIn = this.pools[i].getAmountIn(amountIn, this.path[i]);
         }
         return amountIn;
+    }
+    getSlippage(amountIn) {
+        let spotPrice = Decimal(1);
+        const amountOut = this.getOutput(amountIn);
+        for (let i = 0; i < this.pools.length; i++) {
+            spotPrice = spotPrice.mul(this.pools[i].getSpotPrice(this.path[i]));
+        }
+        const executionPrice = Decimal(Number(amountIn) /
+            Number(this.path[0].decimals) /
+            (Number(amountOut) / Number(this.path[this.path.length - 1].decimals)));
+        return executionPrice
+            .sub(spotPrice)
+            .div(spotPrice)
+            .mul(10000)
+            .toDecimalPlaces(2);
     }
     getIntermediateAmounts(amountIn) {
         //Return amount at each step: [input, after_hop1, after_hop2, ...]

@@ -1,3 +1,4 @@
+import { Decimal } from "decimal.js";
 import UniswapV2Pair from "./AMM.js";
 import Token from "./Token.js";
 
@@ -32,6 +33,24 @@ class Route {
     }
 
     return amountIn;
+  }
+
+  getSlippage(amountIn: bigint) {
+    let spotPrice = Decimal(1);
+    const amountOut = this.getOutput(amountIn);
+    for (let i = 0; i < this.pools.length; i++) {
+      spotPrice = spotPrice.mul(this.pools[i].getSpotPrice(this.path[i]));
+    }
+    const executionPrice = Decimal(
+      Number(amountIn) /
+        Number(this.path[0].decimals) /
+        (Number(amountOut) / Number(this.path[this.path.length - 1].decimals)),
+    );
+    return executionPrice
+      .sub(spotPrice)
+      .div(spotPrice)
+      .mul(10000)
+      .toDecimalPlaces(2);
   }
 
   getIntermediateAmounts(amountIn: bigint): bigint[] {

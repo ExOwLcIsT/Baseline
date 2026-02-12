@@ -26,6 +26,10 @@ export class TransactionBuilder {
     reset() {
         this.params = {};
     }
+    from(address) {
+        this.params.from = address;
+        return this;
+    }
     to(address) {
         this.params.to = address;
         return this;

@@ -27,12 +27,13 @@ export class TransactionBuilder {
   private params = {} as {
     to: Address;
     value: TokenAmount;
-    data?: Uint8Array;
+    data?: string;
     nonce?: number;
     gasLimit?: number;
     maxFeePerGas?: bigint;
     maxPriorityFee?: bigint;
     chainId?: number;
+    from: Address;
   };
   constructor(client: ChainClient, wallet: WalletManager) {
     this.client = client;
@@ -41,15 +42,20 @@ export class TransactionBuilder {
   }
   reset() {
     this.params = {} as {
+      from: Address;
       to: Address;
       value: TokenAmount;
-      data?: Uint8Array;
+      data?: string;
       nonce?: number;
       gasLimit?: number;
       maxFeePerGas?: bigint;
       maxPriorityFee?: bigint;
       chainId?: number;
     };
+  }
+  from(address: Address): TransactionBuilder {
+    this.params.from = address;
+    return this;
   }
   to(address: Address): TransactionBuilder {
     this.params.to = address;
@@ -61,7 +67,7 @@ export class TransactionBuilder {
     return this;
   }
 
-  data(calldata: Uint8Array): TransactionBuilder {
+  data(calldata: string): TransactionBuilder {
     this.params.data = calldata;
     return this;
   }

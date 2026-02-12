@@ -21,7 +21,8 @@ export default class CircuitBreaker {
     if (this.failures.length >= this.config.failureThreshold) this.trip();
   }
   recordSuccess() {
-     // TODO reset on success
+    this.trippedAt = undefined;
+    this.failures = [];
   }
   trip() {
     this.trippedAt = Date.now();

@@ -5,8 +5,8 @@ import PricingEngine from "../pricing/PricingEngine.js";
 import Signal, { Direction } from "../strategy/Signal.js";
 import CircuitBreaker from "./CircuitBreaker.js";
 import ReplayProtection from "./ReplayProtection.js";
-
-enum ExecutorState {
+import { Tokens } from "../strategy/Generator.js";
+export enum ExecutorState {
   IDLE,
   VALIDATING,
   LEG1_PENDING,
@@ -41,7 +41,7 @@ class ExecutionContext {
   }
 }
 
-class ExecutorConfig {
+export class ExecutorConfig {
   leg1Timeout: number = 5.0;
   leg2Timeout: number = 60.0;
   minFillRatio: Decimal = Decimal(0.8);
@@ -139,8 +139,8 @@ export default class Executor {
       ctx.error = "Partial fill below threshold";
       return ctx;
     }
-    ctx.leg1FillPrice = leg1["price"];
-    ctx.leg1FillSize = leg1["filled"];
+    ctx.leg1FillPrice = leg1.price;
+    ctx.leg1FillSize = leg1.filled;
     ctx.state = ExecutorState.LEG1_FILLED;
 
     // Leg 2: DEX
@@ -171,8 +171,8 @@ export default class Executor {
       ctx.error = "DEX failed - unwound";
       return ctx;
     }
-    ctx.leg2FillPrice = leg2["price"];
-    ctx.leg2FillSize = leg2["filled"];
+    ctx.leg2FillPrice = leg2.price;
+    ctx.leg2FillSize = leg2.filled;
     ctx.actualNetPnl = this.calculatePnl(ctx);
     ctx.state = ExecutorState.DONE;
     return ctx;
@@ -230,7 +230,7 @@ export default class Executor {
       ctx.error = "CEX timeout after DEX - unwound";
       return ctx;
     }
-    if (!leg2["success"]) {
+    if (!leg2.success) {
       ctx.state = ExecutorState.UNWINDING;
       await this.unwind(ctx);
       ctx.state = ExecutorState.FAILED;
@@ -278,6 +278,11 @@ export default class Executor {
         filled: size,
       };
     }
+    const [base, quote] = signal.pair.split("/");
+
+    const tokenIn = Tokens[base];
+    const tokenOut = Tokens[quote];
+    this.pricing.swap(size, tokenIn, tokenOut);
     // TODO
     //  "Real DEX execution requires Week 2 integration",
   }

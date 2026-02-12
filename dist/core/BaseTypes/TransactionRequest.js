@@ -10,7 +10,7 @@ export class CustomTransactionRequest {
     constructor(params) {
         this.to = params.to;
         this.value = params.value;
-        this.data = params.data ?? new Uint8Array();
+        this.data = params.data ?? "";
         this.nonce = params.nonce;
         this.gasLimit = params.gasLimit;
         this.maxFeePerGas = params.maxFeePerGas;
@@ -22,7 +22,7 @@ export class CustomTransactionRequest {
         return {
             to: this.to.checksum,
             value: this.value.raw.toString(),
-            data: Buffer.from(this.data).toString("hex"),
+            data: this.data,
             nonce: this.nonce,
             gasLimit: this.gasLimit,
             maxFeePerGas: this.maxFeePerGas?.toString(),

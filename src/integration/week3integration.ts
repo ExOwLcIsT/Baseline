@@ -132,7 +132,6 @@ export default class ArbChecker {
       USDTToken,
       BigInt(size) * ETHToken.decimals,
       1n,
-      Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
     );
     const dexGas = Decimal(
       uniSwapPair.getAmountOut(dexQuote.gasEstimate * 10n ** 9n, ETHToken),
@@ -226,6 +225,7 @@ async function main() {
     cc,
     "http://127.0.0.1:8545",
     process.env.INFURA_WS_RPC!,
+    Address.fromString("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
   );
   const exchangeClient = await ExchangeClient.fromConfig(BINANCE_CONFIG);
   const inventoryTracker = new InventoryTracker();

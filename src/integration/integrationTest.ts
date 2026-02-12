@@ -38,7 +38,7 @@ console.log("GasPrice: " + gasPrice);
 const txParams = {
   to: Address.fromString(testAddress),
   value: TokenAmount.fromRaw(BigInt(1), 18, "."),
-  data: new Uint8Array([]),
+  data: "",
   nonce: nonce,
   gasLimit: 21000,
   maxFeePerGas: gasPrice.getMaxFee(),

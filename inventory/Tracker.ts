@@ -396,4 +396,17 @@ export default class InventoryTracker {
       needsRebalance: maxDeviationPct > thresholdPct,
     };
   }
+  allSkews(): { asset: string; status: boolean }[] {
+    const assets = this.balances.map((b) => b.asset);
+    const assetsSet = [...new Set(assets)];
+    const result: { asset: string; status: boolean }[] = [];
+    assetsSet.forEach((a) => {
+      const assetSkew = this.skew(a, 20);
+      result.push({
+        asset: a,
+        status: assetSkew.needsRebalance,
+      });
+    });
+    return result;
+  }
 }

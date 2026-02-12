@@ -38,8 +38,7 @@ export default class ForkSimulator {
     try {
       if (!router) throw new Error("No router address");
 
-      const signer = await this.provider.getSigner(sender.checksum); // your test account
-
+      const signer = await this.provider.getSigner(sender.checksum);
       const WETH_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
       const WETH_ABI = [
         "function deposit() payable",
@@ -60,7 +59,6 @@ export default class ForkSimulator {
 
       // Example: wrap 1 ETH
       await wrapETH("10");
-
       const data = routerIface.encodeFunctionData("swapExactTokensForTokens", [
         swapParams.amountIn,
         swapParams.amountOutMin,
@@ -112,7 +110,7 @@ export default class ForkSimulator {
         error: undefined,
         logs: [],
       };
-    } catch (e:any) {
+    } catch (e: any) {
       return {
         success: false,
         amountOut: 0n,

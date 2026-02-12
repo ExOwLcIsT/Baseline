@@ -68,8 +68,9 @@ export default class SignalGenerator {
       .div(prices.dexBuy)
       .mul(10_000);
     let direction, spread, cexPrice, dexPrice;
+
     // Pick better direction
-    if (spreadA > spreadB && spreadB >= this.minSpreadBps) {
+    if (spreadA > spreadB && spreadA >= this.minSpreadBps) {
       direction = Direction.BUY_CEX_SELL_DEX;
       [spread, cexPrice, dexPrice] = [spreadA, prices.cexAsk, prices.dexSell];
     } else if (spreadB >= this.minSpreadBps) {
@@ -113,14 +114,20 @@ export default class SignalGenerator {
     pair: string,
     size: Decimal,
   ): Promise<
-    | { cexBid: Decimal; cexAsk: Decimal; dexBuy: Decimal; dexSell: Decimal }
+    | {
+        cexBid: Decimal;
+        cexAsk: Decimal;
+        dexBuy: Decimal;
+        dexSell: Decimal;
+      }
     | undefined
   > {
     try {
       const ob = await this.exchange.fetchOrderBook(pair);
       const analyzer = new OrderBookAnalyzer(ob);
-      const cexBid = analyzer.walkTheBook("sell", size).avgPrice;
-      const cexAsk = analyzer.walkTheBook("buy", size).avgPrice;
+
+      const bidWalkResult = analyzer.walkTheBook("sell", size);
+      const askWalkResult = analyzer.walkTheBook("buy", size);
       const [base, quote] = pair.split("/");
       const sizeDecimals = 10n ** BigInt(size.decimalPlaces());
 
@@ -133,7 +140,6 @@ export default class SignalGenerator {
         Tokens[quote],
         amountIn,
         1n,
-        WALLET_ADDRESS,
       );
       const dexBuy = Decimal(simulated.route.getInput(amountIn).toString())
         .div(Tokens[quote].decimals.toString())
@@ -144,12 +150,12 @@ export default class SignalGenerator {
         .div(size);
 
       return {
-        cexBid: cexBid,
-        cexAsk: cexAsk,
+        cexBid: bidWalkResult.avgPrice,
+        cexAsk: askWalkResult.avgPrice,
         dexBuy: dexBuy,
         dexSell: dexSell,
       };
-    } catch  {
+    } catch {
       return undefined;
     }
   }
@@ -178,7 +184,7 @@ export default class SignalGenerator {
   }
 }
 
-const Tokens: { [id: string]: Token } = {
+export const Tokens: { [id: string]: Token } = {
   USDC: new Token(
     "USDC",
     10n ** 6n,
@@ -200,7 +206,3 @@ const Tokens: { [id: string]: Token } = {
     Address.fromString("0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"),
   ),
 };
-
-const WALLET_ADDRESS = Address.fromString(
-  "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-);
