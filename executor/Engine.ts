@@ -6,7 +6,7 @@ import Signal, { Direction } from "../strategy/Signal.js";
 import CircuitBreaker from "./CircuitBreaker.js";
 import ReplayProtection from "./ReplayProtection.js";
 import { Tokens } from "../strategy/Generator.js";
-import { Order } from "ccxt";
+import Order from "../exchange/Order.js";
 export enum ExecutorState {
   IDLE,
   VALIDATING,
@@ -147,7 +147,7 @@ export default class Executor {
     // Leg 2: DEX
     ctx.state = ExecutorState.LEG2_PENDING;
     ctx.leg2Venue = "dex";
-    let leg2;
+    let leg2: any;
     try {
       leg2 = await Promise.race([
         this.executeDexLeg(signal, signal.size),
@@ -185,7 +185,7 @@ export default class Executor {
     // Leg 1: DEX
     ctx.state = ExecutorState.LEG1_PENDING;
     ctx.leg1Venue = "dex";
-    let leg1;
+    let leg1: any;
     try {
       leg1 = await Promise.race([
         this.executeDexLeg(signal, signal.size),
@@ -201,7 +201,7 @@ export default class Executor {
       ctx.error = "DEX timeout";
       return ctx;
     }
-    if (!leg1.success) {
+    if (!leg1?.success) {
       ctx.state = ExecutorState.FAILED;
       ctx.error = "DEX failed (no cost via Flashbots)";
       return ctx;
@@ -270,7 +270,7 @@ export default class Executor {
       error: result.status,
     };
   }
-  async executeDexLeg(signal: Signal, size: Decimal): any {
+  async executeDexLeg(signal: Signal, size: Decimal) {
     if (this.config.simulationMode) {
       setTimeout(() => {}, 500);
       return {
@@ -346,18 +346,20 @@ export default class Executor {
     let gross: Decimal;
     if (signal.direction == Direction.BUY_CEX_SELL_DEX) {
       // Bought at leg1_fill_price, sold at unwind_price
-      gross = Decimal(unwindResult.price)
+      gross = Decimal(unwindResult.avgFillPrice)
         .sub(ctx.leg1FillPrice!)
         .mul(ctx.leg1FillSize!);
     } else {
       // Sold at leg1_fill_price, bought back at unwind_price
-      gross = ctx.leg1FillPrice!.sub(unwindResult.price).mul(ctx.leg1FillSize!);
+      gross = ctx
+        .leg1FillPrice!.sub(unwindResult.avgFillPrice)
+        .mul(ctx.leg1FillSize!);
     }
     // Subtract both trade fees
     const fees = ctx.leg1FillSize!.mul(ctx.leg1FillPrice!).mul(0.001).add(
       // Leg 1 fee
 
-      ctx.leg1FillSize!.mul(unwindResult.price!).mul(0.001), // Unwind fee
+      ctx.leg1FillSize!.mul(unwindResult.avgFillPrice).mul(0.001), // Unwind fee
     );
 
     return gross.sub(fees); // Usually negative

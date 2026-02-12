@@ -163,6 +163,8 @@ async function main() {
   const config = {
     pairs: ["ETH/USDT"],
     tradeSize: 0.1,
+    simulation: true,
+    signalConfig: {},
   };
   const bot = await ArbBot.create(config);
   bot.run();
