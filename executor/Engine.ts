@@ -6,6 +6,7 @@ import Signal, { Direction } from "../strategy/Signal.js";
 import CircuitBreaker from "./CircuitBreaker.js";
 import ReplayProtection from "./ReplayProtection.js";
 import { Tokens } from "../strategy/Generator.js";
+import { Order } from "ccxt";
 export enum ExecutorState {
   IDLE,
   VALIDATING,
@@ -269,7 +270,7 @@ export default class Executor {
       error: result.status,
     };
   }
-  executeDexLeg(signal: Signal, size: Decimal): any {
+  async executeDexLeg(signal: Signal, size: Decimal): any {
     if (this.config.simulationMode) {
       setTimeout(() => {}, 500);
       return {
@@ -282,18 +283,84 @@ export default class Executor {
 
     const tokenIn = Tokens[base];
     const tokenOut = Tokens[quote];
-    this.pricing.swap(size, tokenIn, tokenOut);
-    // TODO
-    //  "Real DEX execution requires Week 2 integration",
+    await this.pricing.swap(size, tokenIn, tokenOut);
   }
+
   async unwind(ctx: ExecutionContext) {
     // Market sell to flatten stuck position.
     if (this.config.simulationMode) {
       setTimeout(() => {}, 100);
       return;
     }
-    // TODO
-    //  "Real unwind not implemented"
+    if (ctx.leg1FillSize == undefined || ctx.leg1FillSize.eq(0))
+      return { status: "nothing_to_unwind" };
+
+    const signal = ctx.signal;
+
+    let unwindSide, unwindVenue, unwindSize;
+    // Determine what we're stuck with
+    if (signal.direction == Direction.BUY_CEX_SELL_DEX) {
+      // We bought on CEX — sell it back
+      unwindSide = "sell";
+      unwindVenue = "cex";
+      unwindSize = ctx.leg1FillSize;
+    } else {
+      // We sold on CEX — buy it back
+      unwindSide = "buy";
+      unwindVenue = "cex";
+      unwindSize = ctx.leg1FillSize;
+    }
+    console.warn(
+      `UNWINDING: ${unwindSide} ${unwindSize} ${signal.pair} on ${unwindVenue}`,
+    );
+
+    // Execute unwind as market order (accept slippage, need to get out)
+
+    try {
+      const result = await this.exchange.createMarketOrder(
+        signal.pair,
+        unwindSide,
+        unwindSize,
+      );
+
+      const unwindPnl = this.calculateUnwindPnl(ctx, result);
+      return {
+        status: "unwound",
+        fillPrice: result.avgFillPrice,
+        pnl: unwindPnl,
+      };
+    } catch (err) {
+      console.log(`Unwind failed: ${err}`);
+      return {
+        status: "unwindFailed",
+        error: err,
+        manual_action_required: true,
+      };
+    }
+  }
+
+  calculateUnwindPnl(ctx: ExecutionContext, unwindResult: Order): Decimal {
+    // Calculate loss from unwinding.
+
+    const signal = ctx.signal;
+    let gross: Decimal;
+    if (signal.direction == Direction.BUY_CEX_SELL_DEX) {
+      // Bought at leg1_fill_price, sold at unwind_price
+      gross = Decimal(unwindResult.price)
+        .sub(ctx.leg1FillPrice!)
+        .mul(ctx.leg1FillSize!);
+    } else {
+      // Sold at leg1_fill_price, bought back at unwind_price
+      gross = ctx.leg1FillPrice!.sub(unwindResult.price).mul(ctx.leg1FillSize!);
+    }
+    // Subtract both trade fees
+    const fees = ctx.leg1FillSize!.mul(ctx.leg1FillPrice!).mul(0.001).add(
+      // Leg 1 fee
+
+      ctx.leg1FillSize!.mul(unwindResult.price!).mul(0.001), // Unwind fee
+    );
+
+    return gross.sub(fees); // Usually negative
   }
   calculatePnl(ctx: ExecutionContext): Decimal {
     const signal = ctx.signal;

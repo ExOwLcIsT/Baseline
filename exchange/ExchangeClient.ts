@@ -174,14 +174,14 @@ export default class ExchangeClient {
   async createMarketOrder(
     symbol: string,
     side: string,
-    amount: number,
+    amount: Decimal,
   ): Promise<Order> {
     /*
         Place a market order. Same return format as create_limit_ioc_order.
         Use sparingly — LIMIT IOC is preferred for arb.
         */
     const cctxOrder = await this.callAPI("createMarketOrder", () =>
-      this.exchange.createMarketOrder(symbol, side, amount),
+      this.exchange.createMarketOrder(symbol, side, amount.toNumber()),
     );
     const order = new Order(cctxOrder);
     return order;
