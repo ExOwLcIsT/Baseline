@@ -134,11 +134,12 @@ class ArbBot {
 
     this.pairs.forEach(async (pair) => {
       const signal = await this.generator.generate(pair, this.tradeSize);
+
+      console.log("signal generated");
       if (signal == undefined) return;
 
       // Score signal
       signal.score = this.scorer.score(signal, this.inventory.allSkews());
-
       // TODO configure score
       if (signal.score < 60) return;
 
@@ -162,6 +163,13 @@ class ArbBot {
   async syncBalances() {
     const balances = await this.exchange.fetchBalance();
     this.inventory.updateFromCex(Venue.BINANCE, balances);
+    //TODO
+    // Wallet balances
+    //await this.generator.pricing.client.getBalance();
+    this.inventory.updateFromWallet(Venue.WALLET, {
+      ETH: Decimal(1000),
+      USDT: Decimal("100000"),
+    });
   }
   stop() {
     this.running = false;

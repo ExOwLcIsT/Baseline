@@ -54,7 +54,9 @@ export default class SignalGenerator {
         Returns Signal if opportunity found and validated, None otherwise.
         */
     if (this.inCooldown(pair)) return undefined;
+
     const prices = await this.fetchPrices(pair, size);
+
     if (prices == undefined) {
       return undefined;
     }
@@ -131,6 +133,7 @@ export default class SignalGenerator {
   > {
     try {
       const ob = await this.exchange.fetchOrderBook(pair);
+      if (!ob) throw new Error("Order book is undefined");
       const analyzer = new OrderBookAnalyzer(ob);
 
       const bidWalkResult = analyzer.walkTheBook("sell", size);

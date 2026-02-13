@@ -1,3 +1,4 @@
+import WebSocket from "ws";
 import ccxt, { Exchange, TradingFees } from "ccxt";
 import Order from "./Order.js";
 import OrderBook from "./OrderBook.js";
@@ -10,7 +11,16 @@ export default class ExchangeClient {
     */
   exchange: Exchange;
   rateLimiter: RateLimiter;
-  private constructor(config: any) {
+  socket: WebSocket;
+  orderBooks: Map<string, OrderBook>;
+  private constructor(config: {
+    apiKey: string;
+    secret: string;
+    sandbox: boolean;
+    options: any;
+    enableRateLimit: boolean;
+    wsUrl: string;
+  }) {
     /*
         Initialize with config dict containing apiKey, secret, sandbox flag.
         */
@@ -24,9 +34,36 @@ export default class ExchangeClient {
       enableRateLimit: config.enableRateLimit,
     });
     this.rateLimiter = new RateLimiter();
+    this.orderBooks = new Map();
+    this.socket = new WebSocket(config.wsUrl);
+    this.socket.addEventListener("message", (event: any) => {
+      const data = JSON.parse(event.data);
+      if (data.e === "depthUpdate") {
+        const symbol = data.s.toString();
+        const book = new OrderBook(
+          symbol,
+          Date.now(),
+          data.b, // bids
+          data.a, // asks
+        );
+
+        this.orderBooks.set(symbol, book);
+      }
+    });
+
+    this.socket.addEventListener("error", (err) => {
+      console.error("WebSocket error", err);
+    });
   }
 
-  static async fromConfig(config: any): Promise<ExchangeClient> {
+  static async fromConfig(config: {
+    apiKey: string;
+    secret: string;
+    sandbox: boolean;
+    options: any;
+    enableRateLimit: boolean;
+    wsUrl: string;
+  }): Promise<ExchangeClient> {
     const client = new ExchangeClient(config);
     try {
       await client.exchange.fetchTime();
@@ -81,19 +118,25 @@ export default class ExchangeClient {
   async fetchOrderBook(
     symbol: string, // "ETH/USDT"
     limit: number = 20, // Number of price levels
-  ): Promise<OrderBook> {
+  ): Promise<OrderBook | undefined> {
     /*
         Fetch L2 order book snapshot.
         */
-    const cctxOrderBook = await this.callAPI("fetchOrderBook", () =>
-      this.exchange.fetchOrderBook(symbol, limit),
-    );
-    const orderBook = new OrderBook(
-      symbol,
-      Number(cctxOrderBook.timestamp),
-      cctxOrderBook.bids,
-      cctxOrderBook.asks,
-    );
+
+    //from ccxt
+    // const cctxOrderBook = await this.callAPI("fetchOrderBook", () =>
+    //   this.exchange.fetchOrderBook(symbol, limit),
+    // );
+    //return new OrderBook(
+    //   symbol,
+    //   Number(cctxOrderBook.timestamp),
+    //   cctxOrderBook.bids,
+    //   cctxOrderBook.asks,
+    // );
+
+    const nsymbol = symbol.replace("/", "");
+    const orderBook = this.orderBooks.get(nsymbol);
+
     return orderBook;
   }
   async fetchBalance(): Promise<{

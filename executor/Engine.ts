@@ -91,18 +91,18 @@ export default class Executor {
       ctx.error = "Signal invalid";
       return ctx;
     }
-    // Execute based on leg order strategy
+
     if (this.config.useFlashbots) {
       ctx = await this.executeDexFirst(ctx);
     } else {
       ctx = await this.executeCexFirst(ctx);
     }
-    // Record result
+
     this.replayProtection.markExecuted(signal);
-    if (ctx.state == ExecutorState.DONE) {
-      this.circuitBreaker.recordSuccess();
-    } else {
+    if (ctx.state == ExecutorState.FAILED) {
       this.circuitBreaker.recordFailure();
+    } else {
+      this.circuitBreaker.recordSuccess();
     }
     ctx.finishedAt = Date.now();
     return ctx;

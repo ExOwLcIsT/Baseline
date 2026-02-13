@@ -17,8 +17,8 @@ export default class OrderBook {
   constructor(
     symbol: string,
     timestamp: number,
-    bids: [Num, Num][],
-    asks: [Num, Num][],
+    bids: [Decimal, Decimal][],
+    asks: [Decimal, Decimal][],
   ) {
     this.symbol = symbol;
     this.timestamp = timestamp;

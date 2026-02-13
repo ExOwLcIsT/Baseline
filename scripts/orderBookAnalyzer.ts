@@ -13,6 +13,7 @@ async function main() {
 
   const client = await ExchangeClient.fromConfig(BINANCE_CONFIG);
   const orderBook = await client.fetchOrderBook(symbol, depth);
+  if (!orderBook) return;
   const analyzer = new OrderBookAnalyzer(orderBook);
 
   console.log("=".repeat(65));

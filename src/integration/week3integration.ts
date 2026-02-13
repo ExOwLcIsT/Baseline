@@ -137,6 +137,7 @@ export default class ArbChecker {
       uniSwapPair.getAmountOut(dexQuote.gasEstimate * 10n ** 9n, ETHToken),
     ).div(USDTToken.decimals);
     const book = await this.exchangeClient.fetchOrderBook(pair);
+    if (!book) throw new Error("ob undefined");
     const analyzer = new OrderBookAnalyzer(book);
     const buyWalked = analyzer.walkTheBook("buy", Decimal(size));
     const sellWalked = analyzer.walkTheBook("sell", Decimal(size));

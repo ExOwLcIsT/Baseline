@@ -16,7 +16,7 @@ describe("ExchangeClient", () => {
   };
   beforeAll(async () => {
     client = await ExchangeClient.fromConfig(BINANCE_CONFIG);
-    book = await client.fetchOrderBook("ETH/USDT", 20);
+    book = (await client.fetchOrderBook("ETH/USDT", 20))!;
 
     assets = await client.fetchBalance();
   });
@@ -48,7 +48,9 @@ describe("ExchangeClient", () => {
 
   test("Zero-balance assets excluded from result", async () => {
     for (const asset in assets) {
-      expect(assets[asset].free.greaterThan(0) || assets[asset].used.greaterThan(0)).toBe(true);
+      expect(
+        assets[asset].free.greaterThan(0) || assets[asset].used.greaterThan(0),
+      ).toBe(true);
     }
   });
 

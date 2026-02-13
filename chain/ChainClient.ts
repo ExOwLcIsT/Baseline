@@ -30,7 +30,7 @@ class ChainClient {
       try {
         this.provider.getBlockNumber();
         break;
-      } catch  {
+      } catch {
         if (i === max_retries - 1) {
           throw new RPCError(`Failed to connect to ${rpc_url}`);
         }
