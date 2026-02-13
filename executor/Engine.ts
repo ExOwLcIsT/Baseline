@@ -247,7 +247,7 @@ export default class Executor {
   async executeCexLeg(signal: Signal, size?: Decimal): Promise<any> {
     const actualSize = size ?? signal.size;
     if (this.config.simulationMode) {
-      await setTimeout(() => {}, 500);
+      await new Promise((r) => setTimeout(r, 500));
       return {
         success: true,
         price: signal.cexPrice.mul(1.0001),
@@ -272,7 +272,7 @@ export default class Executor {
   }
   async executeDexLeg(signal: Signal, size: Decimal) {
     if (this.config.simulationMode) {
-      setTimeout(() => {}, 500);
+      await new Promise((r) => setTimeout(r, 500));
       return {
         success: true,
         price: signal.dexPrice.mul(0.9998),
@@ -289,7 +289,7 @@ export default class Executor {
   async unwind(ctx: ExecutionContext) {
     // Market sell to flatten stuck position.
     if (this.config.simulationMode) {
-      setTimeout(() => {}, 100);
+      await new Promise((r) => setTimeout(r, 100));
       return;
     }
     if (ctx.leg1FillSize == undefined || ctx.leg1FillSize.eq(0))

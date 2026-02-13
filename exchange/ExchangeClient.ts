@@ -47,7 +47,9 @@ export default class ExchangeClient {
       weight = Number(
         this.exchange.last_response_headers["X-Mbx-Used-Weight-1m"],
       );
-      console.log(`[EXCHANGE] ${name} ok (${Date.now() - start}ms)`);
+      console.log(
+        `[EXCHANGE] ${name} ok (${Date.now() - start}ms) weight: ${weight}`,
+      );
 
       return res;
     } catch (err: any) {

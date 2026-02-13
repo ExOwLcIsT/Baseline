@@ -62,6 +62,7 @@ class ArbBot {
     const exchange = await ExchangeClient.fromConfig(BINANCE_CONFIG);
     const inventory = new InventoryTracker();
     const fees = new FeeStructure();
+
     const sender = Address.fromString(process.env.WALLET_ADDRESS!);
     const chainClient = new ChainClient(process.env.INFURA_RPC_URL);
     const pricingEngine = new PricingEngine(
@@ -70,6 +71,13 @@ class ArbBot {
       process.env.INFURA_WS_RPC!,
       sender,
     );
+
+    const pairAdresses = process.env
+      .UNISWAP_PAIR_ADDRESSES!.split(" ")
+      .map((a) => {
+        return Address.fromString(a);
+      });
+    await pricingEngine.loadPools(pairAdresses);
 
     const generator = new SignalGenerator(
       exchange,
@@ -111,10 +119,10 @@ class ArbBot {
     while (this.running) {
       try {
         await this.tick();
-        await setTimeout(() => {}, 1000);
+        await new Promise((r) => setTimeout(r, 1000));
       } catch (err) {
         console.error(`Tick error: ${err}`);
-        await setTimeout(() => {}, 5000);
+        await new Promise((r) => setTimeout(r, 5000));
       }
     }
   }
@@ -123,15 +131,16 @@ class ArbBot {
       console.log("Circuit breaker is open");
       return;
     }
-    for (const pair in this.pairs) {
+
+    this.pairs.forEach(async (pair) => {
       const signal = await this.generator.generate(pair, this.tradeSize);
-      if (signal == undefined) continue;
+      if (signal == undefined) return;
 
       // Score signal
       signal.score = this.scorer.score(signal, this.inventory.allSkews());
 
       // TODO configure score
-      if (signal.score < 60) continue;
+      if (signal.score < 60) return;
 
       console.log(
         `Signal: ${pair} spread=${signal.spreadBps.toDecimalPlaces(2)}bps score=${signal.score}`,
@@ -148,7 +157,7 @@ class ArbBot {
       else console.log(`FAILED: ${ctx.error}`);
 
       await this.syncBalances();
-    }
+    });
   }
   async syncBalances() {
     const balances = await this.exchange.fetchBalance();

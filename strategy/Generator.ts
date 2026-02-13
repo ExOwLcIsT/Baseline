@@ -54,9 +54,10 @@ export default class SignalGenerator {
         Returns Signal if opportunity found and validated, None otherwise.
         */
     if (this.inCooldown(pair)) return undefined;
-
     const prices = await this.fetchPrices(pair, size);
-    if (prices == undefined) return undefined;
+    if (prices == undefined) {
+      return undefined;
+    }
 
     // Calculate spreads both directions
     const spreadA = prices.dexSell
@@ -76,7 +77,9 @@ export default class SignalGenerator {
     } else if (spreadB >= this.minSpreadBps) {
       direction = Direction.BUY_DEX_SELL_CEX;
       [spread, cexPrice, dexPrice] = [spreadB, prices.cexBid, prices.dexBuy];
-    } else return undefined;
+    } else {
+      return undefined;
+    }
 
     // Economics
     const tradeValue = cexPrice.mul(size);
@@ -84,7 +87,9 @@ export default class SignalGenerator {
     const fees = this.fees.totalFeeBps(tradeValue).div(10_000).mul(tradeValue);
     const netPnl = grossPnl.sub(fees);
 
-    if (netPnl.lt(this.minProfitUsd)) return undefined;
+    if (netPnl.lt(this.minProfitUsd)) {
+      return undefined;
+    }
 
     // Validation
     const inventoryOk = this.checkInventory(pair, direction, size, cexPrice);
@@ -107,9 +112,11 @@ export default class SignalGenerator {
     this.lastSignalTime[pair] = Date.now();
     return signal;
   }
+
   inCooldown(pair: string): boolean {
     return Date.now() - this.lastSignalTime[pair] < this.cooldown;
   }
+
   async fetchPrices(
     pair: string,
     size: Decimal,
@@ -155,7 +162,8 @@ export default class SignalGenerator {
         dexBuy: dexBuy,
         dexSell: dexSell,
       };
-    } catch {
+    } catch (err) {
+      console.error(err);
       return undefined;
     }
   }
