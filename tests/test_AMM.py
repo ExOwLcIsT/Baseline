@@ -1,5 +1,3 @@
-import pytest
-
 from core.base_types import Address
 from pricing.token import Token
 from pricing.AMM import UniswapV2Pair
