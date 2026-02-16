@@ -116,6 +116,8 @@ export default class Executor {
     ctx.leg1Venue = "cex";
     let leg1;
     try {
+      // TODO
+      // race cancel
       leg1 = await Promise.race([
         this.executeCexLeg(signal),
         new Promise((_, reject) =>
@@ -283,10 +285,13 @@ export default class Executor {
 
     const tokenIn = Tokens[base];
     const tokenOut = Tokens[quote];
+    // TODO
+    // Has to return value
     await this.pricing.swap(size, tokenIn, tokenOut);
   }
 
   async unwind(ctx: ExecutionContext) {
+    //
     // Market sell to flatten stuck position.
     if (this.config.simulationMode) {
       await new Promise((r) => setTimeout(r, 100));
@@ -314,8 +319,8 @@ export default class Executor {
       `UNWINDING: ${unwindSide} ${unwindSize} ${signal.pair} on ${unwindVenue}`,
     );
 
-    // Execute unwind as market order (accept slippage, need to get out)
-
+    // TODO
+    // Unwind at lower price
     try {
       const result = await this.exchange.createMarketOrder(
         signal.pair,

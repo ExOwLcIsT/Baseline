@@ -2,80 +2,74 @@
 
 ## Tech Stack
 
-- **Language**: TypeScript (ES2022)
-- **Runtime**: Node.js with ES Modules
-- **Testing**: Vitest
-- **Linting**: ESLint with TypeScript support
-- **Code Formatting**: Prettier
-- **Git Hooks**: Husky + lint-staged
-- **Blockchain**: ethers.js v6
-- **Cryptography**: @noble/secp256k1, @noble/hashes
+- **Language**: Python (3.14.3)
+- **Testing**: pytest
+- **Linting**: black
+- **Code Formatting**: black
+- **Git Hooks**: python-Husky
+- **Blockchain**: eth_account, web3
 
 ## Project Structure
 
 ```
-|src/
-│└── main.ts                 # Application entry point
+|src
+|
 ├core/
-│├── WalletManager.ts        # Wallet creation and management
-│├── CanonicalSerializer.ts  # Deterministic serialization
-│└── BaseTypes/
-│    ├── Address.ts          # Address type wrapper
-│    ├── TokenAmount.ts      # Token amount handling
-│    ├── TransactionRequest.ts # Custom transaction type
-│    └── TransactionReceipt.ts # Receipt type
+│├── wallet_manager.py        # Wallet creation and management
+│├── canonical_serializer.py  # Deterministic serialization
+│└── base_types.py
+│
+├docs/
+│├──README.md
 ├chain/
-│├── ChainClient.ts          # Blockchain RPC client
-│├── TransactionBuilder.ts   # Transaction construction
-│├── TransactionAnalyzer.ts  # On-chain tx analysis CLI
-│├── GasPrice.ts             # Gas price tracking
-│└── ChainErrors.ts          # Custom error types
+│├── chain_client.py          # Blockchain RPC client and Gas price tracking
+│├── transaction_builder.py   # Transaction construction
+│├── transaction_analyzer.py  # On-chain tx analysis CLI
+│└── chain_errors.py          # Custom error types
 |pricing/
-│└── AMM.ts                  # UnitswapV2Pair math simulator
-│└── ForkSimulator.ts        # Fork simulator
-│└── Mempoolmonitor.ts       # Monitor of memory pool
-│└── PriceImpactAnalyzer.ts  # Analyzer of the swap prices
-│└── PricingEngine.ts        # Integration class
-│└── Route.ts                # Route for multi-hop
-│└── RouteFinder.ts
-│└── Token.ts                # Class for token
+│└── AMM.py                  # UnitswapV2Pair math simulator
+│└── fork_simulator.py        # Fork simulator
+│└── mempool_monitor.py       # Monitor of memory pool
+│└── price_impact_analyzer.py  # Analyzer of the swap prices
+│└── pricing_engine.py        # Integration class
+│└── route.py                # Route for multi-hop
+│└── route_finder.py
+│└── token.py                # Class for token
 ├scripts/
-│└── integrationTest.ts      # Integration tests
+│└── integration_test_script.py      # Integration tests
 ├tests/
-│├── WalletManager.test.ts   # Wallet tests
-│└── CanonicalSerializer.test.ts # Serialization tests
+│├── wallet_manager.test.py   # Wallet tests
+│└── canonical_serializer.test.py # Serialization tests
 ├configs/
-│└── eslint.config.mjs       # ESLint configuration
+|
 ├.husky/                     # Git hooks
-├tsconfig.json               # TypeScript config
-├package.json                # required packages
 ├.env.example                # example of .env file
-└README.md
+├requirements.txt            # modules to install
 ```
 
 ## Installation
 
 ### Prerequisites
 
-- Node.js 18+
-- npm or yarn
+- python 3.14
+- pip
 
 ### Setup
 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/ExOwLcIsT/Baseline.git
+git clone https:#github.com/ExOwLcIsT/Baseline.git
 cd Baseline
 ```
 
 2. Install dependencies:
 
 ```bash
-npm install
+pip install -r requirements.txt
 ```
 
-3. Create a `.env` file from the example:
+3. Create an `.env` file from the example:
 
 ```bash
 cp .env.example .env
@@ -85,50 +79,28 @@ cp .env.example .env
 
 ```
 PRIVATE_KEY=<your_wallet_private_key>
-INFURA_RPC_URL=https://<net>.infura.io/v3/<your_api_key>
-
+INFURA_RPC_URL=https:#<net>.infura.io/v3/<your_api_key>
+etc.
 ```
 
 ## Usage
 
-### Build the Project
-
-```bash
-npm run build
-```
-
-Compiles TypeScript to JavaScript in the `dist/` directory.
-
 ### Run the Application
-
-```bash
-npm run start
-```
-
-Executes the main application with wallet initialization.
 
 ### Run Tests
 
 ```bash
-npm test
+pytest
 ```
 
-Runs all unit and integration tests with Vitest.
-
-### Lint Code
-
-```bash
-npm run lint
-```
-
-Runs ESLint to check code quality.
+Runs all unit tests with pytest.
 
 ### Transaction Analysis
 
 Analyze any blockchain transaction:
 
 ```bash
-node ./dist/chain/TransactionAnalyzer.js 0x<transaction_hash> --rpc https://<net>.infura.io/v3/<api_key>
+py ./dist/chain/transaction_analyzer 0x<transaction_hash> --rpc https:#<net>.infura.io/v3/<api_key>
 ```
 
 The analyzer provides:
@@ -144,7 +116,13 @@ The analyzer provides:
 Analyze price impact after swap
 
 ```bash
-node .\dist\pricing\PriceImpactAnalyzer.js <pair_address> --token-in=<Token_symbol> --sizes=<array_of_amount_in_sizes>([1,10,1000])
+py -m pricing.price_impact_analyzer <pair_address> --token-in=<Token_symbol> --sizes=<array_of_amount_in_sizes>(1,10,1000)
+```
+
+Example:
+
+```bash
+py -m scripts.price_impact_analyzer 0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852 --token-in=WETH --sizes=1,2,3,4
 ```
 
 The analyzer provides:
@@ -160,72 +138,60 @@ The analyzer provides:
 
 Handles wallet creation, key management, and transaction signing.
 
-```typescript
-// Generate random wallet
-const wallet = WalletManager.generate();
+```python
+# Generate random wallet
+wallet = WalletManager.generate()
 
-// Load from environment
-const wallet = WalletManager.fromEnv();
+# Load from environment
+wallet = WalletManager.from_env()
 
-// Sign messages
-const signature = wallet.signMessage("hello");
+# Sign messages
+signature = wallet.sign_message("hello")
 
-// Sign typed data (EIP-712)
-const sig = await wallet.signTypedData(domain, types, value);
+# Sign typed data (EIP-712)
+sig = wallet.sign_typed_data(domain, types, value)
 
-// Sign transactions
-const rawTx = await wallet.signTransaction(txRequest);
+# Sign transactions
+rawTx = wallet.sign_transaction(txRequest)
 ```
 
 ### ChainClient
 
 Communicates with blockchain via JSON-RPC.
 
-```typescript
-const client = new ChainClient(rpcUrl);
-const nonce = await client.getNonce(address);
-const receipt = await client.getReceipt(txHash);
-const tx = await client.getTransaction(txHash);
+```python
+client = new ChainClient(rpcUrl)
+nonce = client.get_monce(address)
+receipt = client.get_receipt(txHash)
+tx = client.get_transaction(txHash)
 ```
 
 ### CanonicalSerializer
 
 Ensures deterministic JSON serialization for consistent hashing.
 
-```typescript
-const serialized = CanonicalSerializer.serialize(obj);
-const hash = CanonicalSerializer.hash(obj);
-const isDeterministic = CanonicalSerializer.verify_determinism(obj, iterations);
+```python
+serialized = CanonicalSerializer.serialize(obj)
+hash = CanonicalSerializer.hash(obj)
+isDeterministic = CanonicalSerializer.verify_determinism(obj, iterations)
 ```
 
 ### TransactionBuilder
 
 Constructs and validates blockchain transactions.
 
-```typescript
-const tx = new CustomTransactionRequest({
+```python
+tx = TransactionRequest({
   to: Address.fromString("0x..."),
-  value: TokenAmount.fromRaw(1000000000000000000n, 18),
+  value: TokenAmount.fromRaw(1000000000000000000, 18),
   chainId: 1,
   gasLimit: 21000,
-  maxFeePerGas: 50n,
-  maxPriorityFee: 2n,
-});
+  maxFeePerGas: 50,
+  maxPriorityFee: 2,
+})
 ```
 
 ## Configuration
-
-### TypeScript Configuration (`tsconfig.json`)
-
-- **Target**: ES2022
-- **Module**: NodeNext
-- **Strict Mode**: Enabled
-- **Includes**: src, core, chain, scripts
-- **Excludes**: node_modules, dist
-
-### ESLint Configuration
-
-Enforces code quality and TypeScript best practices.
 
 ### Environment Variables
 
@@ -234,7 +200,7 @@ Enforces code quality and TypeScript best practices.
 PRIVATE_KEY=
 
 # Infura RPC endpoint for Ethereum mainnet
-INFURA_RPC_URL=https://mainnet.infura.io/v3/YOUR_API_KEY
+INFURA_RPC_URL=https:#mainnet.infura.io/v3/YOUR_API_KEY
 
 # Optional: Alchemy RPC endpoint
 ALCHEMY_RPC_URL=
@@ -242,6 +208,12 @@ ALCHEMY_RPC_URL=
 # For memory pool
 INFURA_WS_RPC = <URL>
 
+UNISWAP_V2_ROUTER_ADDRESS=
+BINANCE_TESTNET_API_KEY=
+BINANCE_TESTNET_SECRET=
+CHAIN_URL=
+UNISWAP_PAIR_ADDRESSES=
+BINANCE_WS_URL=
 ```
 
 ## Testing
@@ -283,50 +255,43 @@ The project includes comprehensive tests using Vitest:
 - in case of no routes
 - route output matches sequential swaps
 
-Run tests with coverage:
-
-```bash
-npm test -- --coverage
-```
-
 ## Development
 
 ### Code Quality
 
 Pre-commit hooks automatically:
 
-1. Run ESLint with auto-fix
-2. Format code with Prettier
+Format code with Black
 
 ## API Reference
 
 ### Address Type
 
-```typescript
-const addr = Address.fromString("0x...");
-const str = addr.toString(); // "0x..."
+```python
+addr = Address.fromString("0x...")
+str = addr.toString() # "0x..."
 ```
 
 ### TokenAmount Type
 
-```typescript
-// Create from raw value (wei for ETH)
-const amount = TokenAmount.fromRaw(1000000000000000000n, 18);
-console.log(amount.toString()); // "1.0"
+```python
+# Create from raw value (wei for ETH)
+amount = TokenAmount.fromRaw(1000000000000000000, 18)
+console.log(amount.toString()) # "1.0"
 ```
 
 ### Transaction Request
 
-```typescript
-const tx = new CustomTransactionRequest({
+```python
+tx = new CustomTransactionRequest({
   to: recipient,
   value: amount,
   chainId: 1,
   nonce: 0,
   gasLimit: 21000,
-  maxFeePerGas: 50n,
-  maxPriorityFee: 2n,
-});
+  maxFeePerGas: 50,
+  maxPriorityFee: 2,
+})
 ```
 
 ## Supported Networks
@@ -336,8 +301,3 @@ const tx = new CustomTransactionRequest({
 - **Any EVM-compatible network** via custom RPC URL
 
 ## Acknowledgments
-
-- [ethers.js](https://docs.ethers.org/) - Ethereum library
-- [@noble/secp256k1](https://github.com/paulmillr/noble-secp256k1) - Cryptography
-- [Vitest](https://vitest.dev/) - Testing framework
-- [TypeScript](https://www.typescriptlang.org/) - Type safety

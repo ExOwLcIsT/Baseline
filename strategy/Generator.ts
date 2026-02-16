@@ -56,7 +56,7 @@ export default class SignalGenerator {
     if (this.inCooldown(pair)) return undefined;
 
     const prices = await this.fetchPrices(pair, size);
-
+    console.log(prices);
     if (prices == undefined) {
       return undefined;
     }
@@ -73,23 +73,23 @@ export default class SignalGenerator {
     let direction, spread, cexPrice, dexPrice;
 
     // Pick better direction
-    if (spreadA > spreadB && spreadA >= this.minSpreadBps) {
+    if (spreadA.gt(spreadB) && spreadA.gte(this.minSpreadBps)) {
       direction = Direction.BUY_CEX_SELL_DEX;
       [spread, cexPrice, dexPrice] = [spreadA, prices.cexAsk, prices.dexSell];
-    } else if (spreadB >= this.minSpreadBps) {
+    } else if (spreadB.gte(this.minSpreadBps)) {
       direction = Direction.BUY_DEX_SELL_CEX;
       [spread, cexPrice, dexPrice] = [spreadB, prices.cexBid, prices.dexBuy];
     } else {
+      console.log("Too low spread");
       return undefined;
     }
 
-    // Economics
     const tradeValue = cexPrice.mul(size);
     const grossPnl = spread.div(10_000).mul(tradeValue);
     const fees = this.fees.totalFeeBps(tradeValue).div(10_000).mul(tradeValue);
     const netPnl = grossPnl.sub(fees);
-
     if (netPnl.lt(this.minProfitUsd)) {
+      console.log(`Too low Net PnL : ${netPnl}`);
       return undefined;
     }
 
@@ -151,6 +151,7 @@ export default class SignalGenerator {
         amountIn,
         1n,
       );
+
       const dexBuy = Decimal(simulated.route.getInput(amountIn).toString())
         .div(Tokens[quote].decimals.toString())
         .div(size);

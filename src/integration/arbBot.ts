@@ -167,8 +167,8 @@ class ArbBot {
     // Wallet balances
     //await this.generator.pricing.client.getBalance();
     this.inventory.updateFromWallet(Venue.WALLET, {
-      ETH: Decimal(1000),
-      USDT: Decimal("100000"),
+      ETH: Decimal(20),
+      USDT: Decimal(100000),
     });
   }
   stop() {
