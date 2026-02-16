@@ -6,7 +6,6 @@ from datetime import datetime
 from web3 import Web3
 from core.base_types import TokenAmount
 
-
 SELECTORS = {
     "0xa9059cbb": "transfer(address,uint256)",
     "0x23b872dd": "transferFrom(address,address,uint256)",

@@ -35,8 +35,8 @@ class CanonicalSerializer:
 
         json_str = json.dumps(
             sorted_obj,
-            ensure_ascii=False,          # unicode stable
-            separators=(",", ":"),       # remove whitespace
+            ensure_ascii=False,  # unicode stable
+            separators=(",", ":"),  # remove whitespace
         )
 
         return json_str.encode("utf-8")

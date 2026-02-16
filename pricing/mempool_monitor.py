@@ -164,8 +164,7 @@ class MempoolMonitor:
 
     def decode_swap_params(self, selector: str, tx) -> Optional[Dict[str, Any]]:
         try:
-            contract = self.w3.eth.contract(
-                address=tx.to, abi=V2_ABI)  # synchronous
+            contract = self.w3.eth.contract(address=tx.to, abi=V2_ABI)  # synchronous
             fn, decoded = contract.decode_function_input(tx.input)
 
             path = decoded.get("path", [])

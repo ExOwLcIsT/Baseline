@@ -54,7 +54,8 @@ class WalletManager:
         message = encode_defunct(text=message)
         signed = self.wallet.sign_message(message)
         recovered = Account.recover_message(
-            message, (signed.v, signed.r, signed.s), signed.signature)
+            message, (signed.v, signed.r, signed.s), signed.signature
+        )
         if recovered != self.wallet.address:
             raise Exception("Signature verification failed!")
         return signed
@@ -62,7 +63,8 @@ class WalletManager:
     def sign_typed_data(self, domain: dict, types: dict, value: dict) -> SignedMessage:
         """Sign EIP-712 typed data (used by many DeFi protocols)."""
         message = self.wallet.sign_typed_data(
-            domain_data=domain, message_types=types, message_data=value)
+            domain_data=domain, message_types=types, message_data=value
+        )
 
         return message
 

@@ -12,6 +12,6 @@ class Token:
         self.address = address
 
     def __eq__(self, other: Token) -> bool:
-        if (self.address.__eq__(other.address)):
+        if self.address.__eq__(other.address):
             return True
         return False

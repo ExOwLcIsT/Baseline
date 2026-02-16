@@ -19,6 +19,7 @@ class TransactionBuilder:
             .with_gas_price("high")
             .build())
     """
+
     params: dict
 
     def __init__(self, client: ChainClient, wallet: WalletManager):
@@ -54,8 +55,12 @@ class TransactionBuilder:
 
     def with_gas_estimate(self, buffer: float = 1.2) -> "TransactionBuilder":
         """Estimate gas and set limit with buffer."""
-        tx = TransactionRequest(to=self.params["to"], value=self.params.get("value", TokenAmount(0, 0, ",")),
-                                data=self.params["data"], nonce=self.params["nonce"])
+        tx = TransactionRequest(
+            to=self.params["to"],
+            value=self.params.get("value", TokenAmount(0, 0, ",")),
+            data=self.params["data"],
+            nonce=self.params["nonce"],
+        )
         estimated = self.client.estimate_gas(tx)
         self.params["gas_limit"] = math.ceil(estimated * buffer)
         return self
@@ -78,8 +83,16 @@ class TransactionBuilder:
     def build(self) -> TransactionRequest:
         """Validate and return transaction request."""
         try:
-            tx = TransactionRequest(to=self.params["to"], value=self.params["value"],
-                                    data=self.params["data"], nonce=self.params["nonce"], gas_limit=self.params["gas_limit"], max_fee_per_gas=self.params["max_fee_per_gas"], max_priority_fee=self.params["max_priority_fee"], chain_id=self.params.get("chain_id", 1))
+            tx = TransactionRequest(
+                to=self.params["to"],
+                value=self.params["value"],
+                data=self.params["data"],
+                nonce=self.params["nonce"],
+                gas_limit=self.params["gas_limit"],
+                max_fee_per_gas=self.params["max_fee_per_gas"],
+                max_priority_fee=self.params["max_priority_fee"],
+                chain_id=self.params.get("chain_id", 1),
+            )
         except:
             return None
         return tx

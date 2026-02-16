@@ -8,10 +8,10 @@ from core.wallet import WalletManager
 from core.base_types import TokenAmount, TransactionRequest
 from core.base_types import Address
 
-
 # ------------------------
 # fixtures
 # ------------------------
+
 
 @pytest.fixture
 def wallet_manager():
@@ -21,6 +21,7 @@ def wallet_manager():
 # ------------------------
 # tests
 # ------------------------
+
 
 def test_generate_creates_valid_wallet(wallet_manager):
     assert wallet_manager.address.startswith("0x")
@@ -99,5 +100,3 @@ def test_to_string_hides_private_key(wallet_manager):
     s = str(wallet_manager)
     assert "address=" in s
     assert "private" not in s.lower()
-
-

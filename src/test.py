@@ -8,7 +8,6 @@ from core.base_types import Address
 from pricing.pricing_engine import PricingEngine
 from pricing.token import Token
 
-
 load_dotenv()
 
 # Creating wallet from environment
@@ -22,23 +21,23 @@ cc = ChainClient("http://127.0.0.1:8545")
 # print(nonce)
 USDCToken = Token(
     "USDC",
-    10 ** 6,
+    10**6,
     Address.from_string("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"),
 )
 ETHToken = Token(
     "WETH",
-    10 ** 18,
+    10**18,
     Address.from_string("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
 )
 USDToken = Token(
     "USDT",
-    10 ** 6,
+    10**6,
     Address.from_string("0xdAC17F958D2ee523a2206206994597C13D831ec7"),
 )
-SHIB =  Token(
-  "SHIB",
-  10 ** 18,
-  Address.from_string("0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"),
+SHIB = Token(
+    "SHIB",
+    10**18,
+    Address.from_string("0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE"),
 )
 
 # uni =  UniswapV2Pair(
@@ -102,20 +101,25 @@ SHIB =  Token(
 
 # await monitor.start()
 
-engine = PricingEngine(
-    cc,
-    "http://127.0.0.1:8545",
-    os.getenv("INFURA_WS_RPC")
+engine = PricingEngine(cc, "http://127.0.0.1:8545", os.getenv("INFURA_WS_RPC"))
+asyncio.run(
+    engine.load_pools(
+        [
+            Address.from_string(
+                "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"
+            ),  # WETH/USDC
+            Address.from_string(
+                "0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852"
+            ),  # WETH/USDT
+            Address.from_string(
+                "0x3041cbd36888becc7bbcbc0045e3b1f144466f5f"
+            ),  # USDC/USDT
+        ]
+    )
 )
-asyncio.run(engine.load_pools([Address.from_string("0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"),  # WETH/USDC
-                               Address.from_string(
-                                   "0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852"),  # WETH/USDT
-                               Address.from_string(
-                                   "0x3041cbd36888becc7bbcbc0045e3b1f144466f5f"),  # USDC/USDT
-                               ]))
 
 # engine.swap(Decimal(0.1), ETHToken, USDCToken)
-quote = engine.get_quote(ETHToken, USDToken, 2 * 10 ** 18, 0)
+quote = engine.get_quote(ETHToken, USDToken, 2 * 10**18, 0)
 print(quote.__dict__)
 # quote = await engine.getQuote(
 #   ETHToken,

@@ -23,10 +23,7 @@ class PricingEngine:
     """
 
     def __init__(
-        self,
-        chain_client: ChainClient,  # From Week 1
-        fork_url: str,
-        ws_url: str
+        self, chain_client: ChainClient, fork_url: str, ws_url: str  # From Week 1
     ):
         self.client = chain_client
         self.simulator = ForkSimulator(fork_url)
@@ -37,23 +34,21 @@ class PricingEngine:
     async def load_pools(self, pool_addresses: list[Address]):
         """Load pool data from chain."""
         for addr in pool_addresses:
-            self.pools[addr.checksum] = await UniswapV2Pair.from_chain(addr, self.client)
+            self.pools[addr.checksum] = await UniswapV2Pair.from_chain(
+                addr, self.client
+            )
         self.router = RouteFinder(list(self.pools.values()))
 
     def refresh_pool(self, address: Address):
         """Refresh single pool's reserves."""
         pair = self.pools.get(address)
-        if (pair is None):
+        if pair is None:
             return
 
         pair.refresh_reserves(self.client)
 
     def get_quote(
-        self,
-        token_in: Token,
-        token_out: Token,
-        amount_in: int,
-        gas_price_gwei: int
+        self, token_in: Token, token_out: Token, amount_in: int, gas_price_gwei: int
     ) -> Quote:
         """
         Get best quote for a swap.
@@ -63,8 +58,11 @@ class PricingEngine:
         )
 
         # Verify with simulation
-        sim_result = self.simulator.simulate_route(route, amount_in, Address.from_string(
-            "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"))
+        sim_result = self.simulator.simulate_route(
+            route,
+            amount_in,
+            Address.from_string("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
+        )
 
         if not sim_result.success:
             raise QuoteError(f"Simulation failed: {sim_result.error}")
@@ -77,6 +75,7 @@ class PricingEngine:
             gas_estimate=sim_result.gas_used,
             timestamp=round(time.time()),
         )
+
     def _on_mempool_swap(self, swap: ParsedSwap):
         """Handle detected mempool swap."""
         # Check if it affects any of our pools
@@ -85,10 +84,12 @@ class PricingEngine:
         print(f"Detected swap: {swap.dex} {swap.method}")
         print(f"{swap.amountIn} → min {swap.minAmountOut}")
         print(f" Slippage tolerance: {swap.slippageTolerance}")
-        if (self.pools):
+        if self.pools:
             for pool in self.pools.values():
-                if pool.token0.address.lower == swap.tokenIn.lower \
-                        or pool.token1.address.lower == swap.tokenIn.lower:
+                if (
+                    pool.token0.address.lower == swap.tokenIn.lower
+                    or pool.token1.address.lower == swap.tokenIn.lower
+                ):
                     self.refreshPool(pool.address)
 
 
@@ -105,6 +106,5 @@ class Quote:
     def is_valid(self) -> bool:
         """Quote valid if simulation matches expectation within tolerance."""
         tolerance = 0.001  # 0.1%
-        diff = abs(self.expected_output - self.simulated_output) / \
-            self.expected_output
+        diff = abs(self.expected_output - self.simulated_output) / self.expected_output
         return diff < tolerance

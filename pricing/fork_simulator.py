@@ -10,7 +10,6 @@ from pricing.route import Route
 from pricing.AMM import UniswapV2Pair
 from pricing.token import Token
 
-
 ROUTER_ABI = [
     {
         "name": "swapExactTokensForTokens",
@@ -61,10 +60,20 @@ ERC20_ABI = [
 ]
 
 WETH_ABI = [
-    {"name": "deposit", "type": "function",
-        "stateMutability": "payable", "inputs": [], "outputs": []},
-    {"name": "withdraw", "type": "function", "stateMutability": "nonpayable",
-        "inputs": [{"type": "uint256"}], "outputs": []},
+    {
+        "name": "deposit",
+        "type": "function",
+        "stateMutability": "payable",
+        "inputs": [],
+        "outputs": [],
+    },
+    {
+        "name": "withdraw",
+        "type": "function",
+        "stateMutability": "nonpayable",
+        "inputs": [{"type": "uint256"}],
+        "outputs": [],
+    },
 ]
 
 
@@ -91,35 +100,33 @@ class ForkSimulator:
         WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
         weth: Contract = self.w3.eth.contract(address=WETH, abi=WETH_ABI)
 
-        tx = weth.functions.deposit().build_transaction({
-            "from": sender.checksum,
-            "value": amount_wei,
-            "gas": 200000,
-        })
+        tx = weth.functions.deposit().build_transaction(
+            {
+                "from": sender.checksum,
+                "value": amount_wei,
+                "gas": 200000,
+            }
+        )
         self.w3.eth.send_transaction(tx)
 
     def _approve(self, token: str, owner: Address, spender: Address, amount: int):
         token_contract = self.w3.eth.contract(address=token, abi=ERC20_ABI)
         tx = token_contract.functions.approve(
-            spender.checksum,
-            amount
+            spender.checksum, amount
         ).build_transaction({"from": owner.checksum})
         self.w3.eth.send_transaction(tx)
+
     # --------------------------------------------------
 
     def simulate_swap(
-        self,
-        router: Address,
-        swap_params: dict,
-        sender: Address
+        self, router: Address, swap_params: dict, sender: Address
     ) -> SimulationResult:
 
         try:
-            self._wrap_eth(sender=sender, amount_wei=10*10**18)
+            self._wrap_eth(sender=sender, amount_wei=10 * 10**18)
             self._approve(swap_params["path"][0], sender, router, 2**256 - 1)
             router_contract: Contract = self.w3.eth.contract(
-                address=router.checksum,
-                abi=ROUTER_ABI
+                address=router.checksum, abi=ROUTER_ABI
             )
 
             # estimate gas
@@ -128,7 +135,7 @@ class ForkSimulator:
                 swap_params["amountOutMin"],
                 swap_params["path"],
                 sender.checksum,
-                swap_params["deadline"]
+                swap_params["deadline"],
             ).build_transaction({"from": sender.checksum})
 
             gas = self.w3.eth.estimate_gas(tx)
@@ -138,32 +145,21 @@ class ForkSimulator:
                 swap_params["amountOutMin"],
                 swap_params["path"],
                 sender.checksum,
-                swap_params["deadline"]
+                swap_params["deadline"],
             ).call({"from": sender.checksum})
             return SimulationResult(
-                success=True,
-                amount_out=amounts[-1],
-                gas_used=gas,
-                error=None,
-                logs=[]
+                success=True, amount_out=amounts[-1], gas_used=gas, error=None, logs=[]
             )
 
         except Exception as e:
             return SimulationResult(
-                success=False,
-                amount_out=0,
-                gas_used=0,
-                error=str(e),
-                logs=[]
+                success=False, amount_out=0, gas_used=0, error=str(e), logs=[]
             )
 
     # --------------------------------------------------
 
     def simulate_route(
-        self,
-        route: Route,
-        amount_in: int,
-        sender: Address
+        self, route: Route, amount_in: int, sender: Address
     ) -> SimulationResult:
         path = [t.address.checksum for t in route.path]
         deadline = round(time.time()) + 180
@@ -176,18 +172,15 @@ class ForkSimulator:
                 "amountIn": amount_in,
                 "amountOutMin": 0,
                 "path": path,
-                "deadline": deadline
+                "deadline": deadline,
             },
-            sender
+            sender,
         )
 
     # --------------------------------------------------
 
     def compare_simulation_vs_calculation(
-        self,
-        pair: UniswapV2Pair,
-        amount_in: int,
-        token_in: Token
+        self, pair: UniswapV2Pair, amount_in: int, token_in: Token
     ) -> dict:
 
         calculated = pair.get_amount_out(amount_in, token_in)
@@ -198,9 +191,9 @@ class ForkSimulator:
                 "amountIn": amount_in,
                 "amountOutMin": 0,
                 "path": [pair.token0.address.checksum, pair.token1.address.checksum],
-                "deadline": self.w3.eth.get_block("latest")["timestamp"] + 60
+                "deadline": self.w3.eth.get_block("latest")["timestamp"] + 60,
             },
-            sender=Address("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+            sender=Address("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
         )
 
         return {

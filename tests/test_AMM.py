@@ -4,16 +4,15 @@ from core.base_types import Address
 from pricing.token import Token
 from pricing.AMM import UniswapV2Pair
 
-
 USDCToken = Token(
     "USDC",
-    10 ** 6,
+    10**6,
     Address.from_string("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"),
 )
 
 ETHToken = Token(
     "ETH",
-    10 ** 18,
+    10**18,
     Address.from_string("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
 )
 

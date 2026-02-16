@@ -23,8 +23,16 @@ gasPrice = cc.get_gas_price()
 print("Nonce: ", nonce)
 print("GasPrice: ", gasPrice)
 tx_builder = TransactionBuilder(cc, wallet)
-tx = tx_builder.to(Address.from_string(testAddress)).value(TokenAmount.from_raw(
-    1, 18, ".")).data("0x").nonce(nonce).with_gas_estimate().with_gas_price().chain_id(1).build()
+tx = (
+    tx_builder.to(Address.from_string(testAddress))
+    .value(TokenAmount.from_raw(1, 18, "."))
+    .data("0x")
+    .nonce(nonce)
+    .with_gas_estimate()
+    .with_gas_price()
+    .chain_id(1)
+    .build()
+)
 
 
 estimatedGas = cc.estimate_gas(tx)

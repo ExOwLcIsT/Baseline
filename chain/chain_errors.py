@@ -2,7 +2,7 @@ from typing import Optional
 from core.base_types import TransactionReceipt
 
 
-class ChainException (Exception):
+class ChainException(Exception):
 
     # Base class for chain errors.
     def __init__(self, message: str):
@@ -10,7 +10,7 @@ class ChainException (Exception):
         self.name = "ChainException"
 
 
-class RPCException (ChainException):
+class RPCException(ChainException):
     code: Optional[int]
     # RPC request failed.
 
@@ -19,7 +19,7 @@ class RPCException (ChainException):
         self.code = code
 
 
-class TransactionFailed (ChainException):
+class TransactionFailed(ChainException):
     # Transaction reverted.
     txHash: str
     receipt: TransactionReceipt

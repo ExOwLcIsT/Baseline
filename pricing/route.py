@@ -33,7 +33,7 @@ class Route:
         """Return amount at each step: [input, after_hop1, after_hop2, ...]"""
         amounts = []
         amounts.append(amount_in)
-        for i in range(0, self.num_hops-1):
+        for i in range(0, self.num_hops - 1):
             amount_out = self.pools[i].get_amount_out(amount_in, self.path[i])
             amounts.append(amount_out)
             amount_in = amount_out
@@ -58,9 +58,8 @@ class Route:
             spotPrice = spotPrice.mul(self.pools[i].getSpotPrice(self.path[i]))
 
         executionPrice = Decimal(
-            amount_in /
-            self.path[0].decimals /
-            (amountOut /
-             self.path[self.path.length - 1].decimals),
+            amount_in
+            / self.path[0].decimals
+            / (amountOut / self.path[self.path.length - 1].decimals),
         )
-        return round((executionPrice-spotPrice) / spotPrice * 10000, 2)
+        return round((executionPrice - spotPrice) / spotPrice * 10000, 2)

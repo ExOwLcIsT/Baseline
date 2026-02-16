@@ -3,12 +3,14 @@ from typing import Optional
 from decimal import Decimal
 import re
 from eth_hash.auto import keccak
+
 HEX_REGEX = r"^0x[0-9a-fA-F]{40}$"
 
 
 @dataclass(frozen=False)
 class Address:
     """Ethereum address with validation and checksumming."""
+
     value: str
 
     def __post_init__(self):
@@ -59,18 +61,23 @@ class TokenAmount:
     Internally stores raw integer (wei-equivalent).
     Provides human-readable formatting.
     """
+
     raw: int  # Raw amount (e.g., wei)
     decimals: int  # Token decimals (e.g., 18 for ETH, 6 for USDC)
     symbol: Optional[str] = None
 
     @classmethod
-    def from_raw(cls, raw: int, decimals: int, symbol: str | None = None) -> "TokenAmount":
+    def from_raw(
+        cls, raw: int, decimals: int, symbol: str | None = None
+    ) -> "TokenAmount":
         return cls(int(raw), decimals, symbol)
 
     @classmethod
-    def from_human(cls, amount: str | Decimal, decimals: int, symbol: str = None) -> "TokenAmount":
+    def from_human(
+        cls, amount: str | Decimal, decimals: int, symbol: str = None
+    ) -> "TokenAmount":
         """Create from human-readable amount (e.g., '1.5' ETH)."""
-        base = 10 ** decimals
+        base = 10**decimals
 
         # bigint path in TS
         if isinstance(amount, int):
@@ -94,7 +101,7 @@ class TokenAmount:
     @property
     def human(self) -> Decimal:
         """Returns human-readable decimal."""
-        base = 10 ** self.decimals
+        base = 10**self.decimals
         whole = self.raw // base
         frac = self.raw % base
 
@@ -127,6 +134,7 @@ class TokenAmount:
 @dataclass
 class TransactionRequest:
     """A transaction ready to be signed."""
+
     to: Address
     value: TokenAmount
     data: bytes = "0x"
@@ -139,11 +147,11 @@ class TransactionRequest:
     def to_dict(self) -> dict:
         """Convert to web3-compatible dict."""
         tx = {
-            'to': self.to.checksum,
-            'value': self.value.raw,
-            'data': self.data,
-            'nonce': self.nonce,
-            'chainId': self.chain_id
+            "to": self.to.checksum,
+            "value": self.value.raw,
+            "data": self.data,
+            "nonce": self.nonce,
+            "chainId": self.chain_id,
         }
         if getattr(self, "gas_limit", None) is not None:
             tx["gas"] = self.gas_limit
@@ -160,6 +168,7 @@ class TransactionRequest:
 @dataclass
 class TransactionReceipt:
     """Parsed transaction receipt."""
+
     tx_hash: str
     block_number: int
     status: bool  # True = success

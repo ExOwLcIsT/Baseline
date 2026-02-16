@@ -22,16 +22,14 @@ class ChainClient:
     w3: Web3
 
     def __init__(
-        self,
-        rpc_url: Optional[str] = None,
-        timeout: int = 30,
-        max_retries: int = 3
+        self, rpc_url: Optional[str] = None, timeout: int = 30, max_retries: int = 3
     ):
         if not rpc_url:
             rpc_url = os.getenv("INFURA_RPC_URL")
             if not rpc_url:
                 raise RPCException(
-                    "No RPC URL provided. Set INFURA_RPC_URL environment variable or pass rpc_url parameter.")
+                    "No RPC URL provided. Set INFURA_RPC_URL environment variable or pass rpc_url parameter."
+                )
 
         self.w3 = Web3(Web3.HTTPProvider(rpc_url))
         for i in range(0, max_retries):
@@ -39,9 +37,10 @@ class ChainClient:
                 self.w3.eth.get_block_number()
                 break
             except:
-                if i == max_retries-1:
+                if i == max_retries - 1:
                     raise RPCException(
-                        "No RPC URL provided. Set INFURA_RPC_URL environment variable or pass rpc_url parameter.")
+                        "No RPC URL provided. Set INFURA_RPC_URL environment variable or pass rpc_url parameter."
+                    )
                 self.w3 = Web3(Web3.HTTPProvider(rpc_url))
 
     def get_balance(self, address: Address) -> TokenAmount:
@@ -51,7 +50,8 @@ class ChainClient:
 
     def get_nonce(self, address: Address, block: str = "pending") -> int:
         nonce = self.w3.eth.get_transaction_count(
-            address.checksum, block_identifier=block)
+            address.checksum, block_identifier=block
+        )
         return nonce
 
     def get_gas_price(self) -> GasPrice:
@@ -84,14 +84,12 @@ class ChainClient:
         return result
 
     def wait_for_receipt(
-        self,
-        tx_hash: str,
-        timeout: int = 120,
-        poll_interval: float = 1.0
+        self, tx_hash: str, timeout: int = 120, poll_interval: float = 1.0
     ) -> TransactionReceipt:
         """Wait for transaction confirmation."""
         tx_result = self.w3.eth.wait_for_transaction_receipt(
-            tx_hash, timeout, poll_interval)
+            tx_hash, timeout, poll_interval
+        )
         return tx_result
 
     def get_transaction(self, tx_hash: str) -> dict:
@@ -114,6 +112,7 @@ class ChainClient:
 @dataclass
 class GasPrice:
     """Current gas price information."""
+
     base_fee: int
     priority_fee_low: int
     priority_fee_medium: int

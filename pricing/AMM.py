@@ -20,7 +20,7 @@ class UniswapV2Pair:
         token1: Token,
         reserve0: int,
         reserve1: int,
-        fee_bps: int = 30  # 0.30% = 30 basis points
+        fee_bps: int = 30,  # 0.30% = 30 basis points
     ):
         self.address = address
         self.token0 = token0
@@ -57,7 +57,7 @@ class UniswapV2Pair:
         Calculate required input for desired output.
         (Inverse of get_amount_out)
         """
-        if (not token_out.__eq__(self.token0) and not token_out.__eq__(self.token1)):
+        if not token_out.__eq__(self.token0) and not token_out.__eq__(self.token1):
             raise Exception("Invalid token")
 
         direction = token_out.__eq__(self.token0)
@@ -79,15 +79,21 @@ class UniswapV2Pair:
         """
         Returns spot price (for display only, not calculations).
         """
-        if (not token_in.__eq__(self.token0) and not token_in.__eq__(self.token1)):
+        if not token_in.__eq__(self.token0) and not token_in.__eq__(self.token1):
             raise Exception("Invalid token")
 
         direction = token_in.__eq__(self.token0)
-        num = (self.reserve0) / (self.token0.decimals)if direction else (
-            self.reserve1) / (self.token1.decimals)
+        num = (
+            (self.reserve0) / (self.token0.decimals)
+            if direction
+            else (self.reserve1) / (self.token1.decimals)
+        )
 
-        denum = (self.reserve1) / (self.token1.decimals) if direction else (
-            self.reserve0) / (self.token0.decimals)
+        denum = (
+            (self.reserve1) / (self.token1.decimals)
+            if direction
+            else (self.reserve0) / (self.token0.decimals)
+        )
 
         return num / denum
 
@@ -95,11 +101,14 @@ class UniswapV2Pair:
         """
         Returns actual execution price for given trade size.
         """
-        if (not token_in.__eq__(self.token0) and not token_in.__eq__(self.token1)):
+        if not token_in.__eq__(self.token0) and not token_in.__eq__(self.token1):
             raise Exception("Invalid token")
         amountInNumber = (amount_in) / (token_in.decimals)
         amount_out = self.get_amount_out(amount_in, token_in) / (
-            self.token1.decimals if token_in.__eq__(self.token0) else self.token0.decimals)
+            self.token1.decimals
+            if token_in.__eq__(self.token0)
+            else self.token0.decimals
+        )
 
         executionPrice = amountInNumber / amount_out
         return executionPrice
@@ -108,7 +117,7 @@ class UniswapV2Pair:
         """
         Returns price impact as a decimal (0.01 = 1%).
         """
-        if (not token_in.__eq__(self.token0) and not token_in.__eq__(self.token1)):
+        if not token_in.__eq__(self.token0) and not token_in.__eq__(self.token1):
             raise Exception("Invalid token")
         spotPrice = self.get_spot_price(token_in)
         executionPrice = self.get_execution_price(amount_in, token_in)
@@ -119,7 +128,7 @@ class UniswapV2Pair:
         Returns a NEW pair with updated reserves after the swap.
         (Useful for multi-hop simulation)
         """
-        if (not token_in.__eq__(self.token0) and not token_in.__eq__(self.token1)):
+        if not token_in.__eq__(self.token0) and not token_in.__eq__(self.token1):
             raise Exception("Invalid token")
 
         direction = token_in.__eq__(self.token0)
@@ -212,8 +221,8 @@ class UniswapV2Pair:
         addr0 = pair.functions.token0().call()
         addr1 = pair.functions.token1().call()
         reserves = pair.functions.getReserves().call()
-        reserve0 = (reserves[0])
-        reserve1 = (reserves[1])
+        reserve0 = reserves[0]
+        reserve1 = reserves[1]
 
         # -------------------
         # fetch token metadata
@@ -221,11 +230,11 @@ class UniswapV2Pair:
         token0Contract = client.w3.eth.contract(address=addr0, abi=erc20Abi)
         token1Contract = client.w3.eth.contract(address=addr1, abi=erc20Abi)
 
-        symbol0 = token0Contract.functions.symbol().call(),
-        decimals0 = token0Contract.functions.decimals().call(),
+        symbol0 = (token0Contract.functions.symbol().call(),)
+        decimals0 = (token0Contract.functions.decimals().call(),)
 
-        symbol1 = token1Contract.functions.symbol().call(),
-        decimals1 = token1Contract.functions.decimals().call(),
+        symbol1 = (token1Contract.functions.symbol().call(),)
+        decimals1 = (token1Contract.functions.decimals().call(),)
         # -------------------
         # build tokens
         # -------------------
@@ -255,6 +264,6 @@ class UniswapV2Pair:
             self.token1,
             self.reserve0,
             self.reserve1,
-            self.feeBPS
+            self.feeBPS,
         )
         return copy
