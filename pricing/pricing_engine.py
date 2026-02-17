@@ -105,6 +105,5 @@ class Quote:
     def is_valid(self) -> bool:
         """Quote valid if simulation matches expectation within tolerance."""
         tolerance = 0.001  # 0.1%
-        diff = abs(self.expected_output - self.simulated_output) / \
-            self.expected_output
+        diff = abs(self.expected_output - self.simulated_output) / self.expected_output
         return diff < tolerance

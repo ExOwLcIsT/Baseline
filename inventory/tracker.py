@@ -43,7 +43,8 @@ class InventoryTracker:
 
     def _find(self, venue: Venue, asset: str) -> Balance | None:
         return next(
-            (b for b in self.balances if b.venue == venue and b.asset == asset), None
+            (b for b in self.balances if b.venue ==
+             venue and b.asset == asset), None
         )
 
     # ------------------------------------------------------------------ #
@@ -63,7 +64,8 @@ class InventoryTracker:
             bal = self._find(venue, asset)
             if bal is None:
                 self.balances.append(
-                    Balance(venue, asset, data["free"], data.get("used", Decimal("0")))
+                    Balance(venue, asset, data["free"],
+                            data.get("used", Decimal("0")))
                 )
             else:
                 bal.free = data["free"]
@@ -254,7 +256,8 @@ class InventoryTracker:
         """
         # Pre-flight
         check = (
-            self.can_execute(venue, quote_asset, quote_amount, venue, fee_asset, fee)
+            self.can_execute(venue, quote_asset, quote_amount,
+                             venue, fee_asset, fee)
             if side == "buy"
             else self.can_execute(venue, base_asset, base_amount, venue, fee_asset, fee)
         )
@@ -262,7 +265,6 @@ class InventoryTracker:
             raise ValueError(check["reason"])
 
         base_bal = self._find(venue, base_asset)
-        # ← bug fix: was base_asset in JS
         quote_bal = self._find(venue, quote_asset)
         fee_bal = self._find(venue, fee_asset)
 
@@ -270,8 +272,8 @@ class InventoryTracker:
             if base_bal is None:
                 self.balances.append(Balance(venue, base_asset, base_amount))
             else:
-                base_bal.free += base_amount  # ← bug fix: Decimal is immutable,
-            quote_bal.free -= quote_amount  # must reassign not call .add()
+                base_bal.free += base_amount
+            quote_bal.free -= quote_amount
         else:
             base_bal.free -= base_amount
             if quote_bal is None:

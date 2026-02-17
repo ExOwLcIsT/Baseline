@@ -1,7 +1,7 @@
+ccxt==4.5.38
 eth_account==0.13.7
 eth_hash==0.7.1
 pytest==9.0.2
 python-dotenv==1.2.1
 web3==7.14.1
-black==26.1.0
-python-husky==0.1.0
+websockets==15.0.1

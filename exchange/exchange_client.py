@@ -72,8 +72,7 @@ class ExchangeClient:
         try:
             res = fn()
             weight = int(
-                self.exchange.last_response_headers.get(
-                    "X-Mbx-Used-Weight-1m", 0)
+                self.exchange.last_response_headers.get("X-Mbx-Used-Weight-1m", 0)
             )
             print(
                 f"[EXCHANGE] {name} ok ({(time.time() - start) * 1000:.0f}ms) weight: {weight}"
