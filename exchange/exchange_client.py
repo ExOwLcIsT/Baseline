@@ -72,7 +72,8 @@ class ExchangeClient:
         try:
             res = fn()
             weight = int(
-                self.exchange.last_response_headers.get("X-Mbx-Used-Weight-1m", 0)
+                self.exchange.last_response_headers.get(
+                    "X-Mbx-Used-Weight-1m", 0)
             )
             print(
                 f"[EXCHANGE] {name} ok ({(time.time() - start) * 1000:.0f}ms) weight: {weight}"
@@ -96,7 +97,7 @@ class ExchangeClient:
         finally:
             self.rateLimiter.record(weight)
 
-    def fetch_order_book_rest(self, symbol: str, depth: int):
+    def fetch_order_book_rest(self, symbol: str, depth: int = 20):
         result = self.call_API(
             "fetchOrderBook",
             lambda: self.exchange.fetch_order_book(symbol=symbol, limit=depth),
@@ -107,7 +108,6 @@ class ExchangeClient:
             bids=result.get("bids"),
             asks=result.get("asks"),
         )
-        print(ob)
         return ob
 
     def fetch_order_book(

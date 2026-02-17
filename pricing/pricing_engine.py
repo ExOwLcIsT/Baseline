@@ -56,7 +56,6 @@ class PricingEngine:
         route, net_output = self.router.find_best_route(
             token_in, token_out, amount_in, gas_price_gwei
         )
-
         # Verify with simulation
         sim_result = self.simulator.simulate_route(
             route,
@@ -106,5 +105,6 @@ class Quote:
     def is_valid(self) -> bool:
         """Quote valid if simulation matches expectation within tolerance."""
         tolerance = 0.001  # 0.1%
-        diff = abs(self.expected_output - self.simulated_output) / self.expected_output
+        diff = abs(self.expected_output - self.simulated_output) / \
+            self.expected_output
         return diff < tolerance
