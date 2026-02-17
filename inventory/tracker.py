@@ -18,9 +18,9 @@ PRICES = {
 
 @dataclass
 class Balance:
-    venue:  Venue
-    asset:  str
-    free:   Decimal
+    venue: Venue
+    asset: str
+    free: Decimal
     locked: Decimal = field(default_factory=lambda: Decimal("0"))
 
     @property
@@ -42,7 +42,9 @@ class InventoryTracker:
     # ------------------------------------------------------------------ #
 
     def _find(self, venue: Venue, asset: str) -> Balance | None:
-        return next((b for b in self.balances if b.venue == venue and b.asset == asset), None)
+        return next(
+            (b for b in self.balances if b.venue == venue and b.asset == asset), None
+        )
 
     # ------------------------------------------------------------------ #
     #  Updates                                                             #
@@ -61,7 +63,8 @@ class InventoryTracker:
             bal = self._find(venue, asset)
             if bal is None:
                 self.balances.append(
-                    Balance(venue, asset, data["free"], data.get("used", Decimal("0"))))
+                    Balance(venue, asset, data["free"], data.get("used", Decimal("0")))
+                )
             else:
                 bal.free = data["free"]
                 bal.locked = data.get("used", Decimal("0"))
@@ -78,7 +81,8 @@ class InventoryTracker:
             bal = self._find(venue, asset)
             if bal is None:
                 self.balances.append(
-                    Balance(venue, asset, Decimal(str(amount)), Decimal("0")))
+                    Balance(venue, asset, Decimal(str(amount)), Decimal("0"))
+                )
             else:
                 bal.free = Decimal(str(amount))
                 bal.locked = Decimal("0")
@@ -107,16 +111,16 @@ class InventoryTracker:
 
         for b in self.balances:
             venues.setdefault(b.venue, {})[b.asset] = {
-                "free":   b.free,
+                "free": b.free,
                 "locked": b.locked,
-                "total":  b.total,
+                "total": b.total,
             }
             totals[b.asset] = totals.get(b.asset, Decimal("0")) + b.total
 
         return {
             "timestamp": datetime.now(),
-            "venues":    venues,
-            "totals":    totals,
+            "venues": venues,
+            "totals": totals,
             "total_usd": self.net_usd_value(PRICES),
         }
 
@@ -148,11 +152,11 @@ class InventoryTracker:
 
     def can_execute(
         self,
-        buy_venue:   Venue,
-        buy_asset:   str,
-        buy_amount:  Decimal,
-        sell_venue:  Venue,
-        sell_asset:  str,
+        buy_venue: Venue,
+        buy_asset: str,
+        buy_amount: Decimal,
+        sell_venue: Venue,
+        sell_asset: str,
         sell_amount: Decimal,
     ) -> dict:
         """
@@ -168,63 +172,63 @@ class InventoryTracker:
             'reason':              str | None,
         }
         """
-        buy_bal = self._find(buy_venue,  buy_asset)
+        buy_bal = self._find(buy_venue, buy_asset)
         sell_bal = self._find(sell_venue, sell_asset)
 
         if not buy_bal and not sell_bal:
             return {
-                "can_execute":          False,
-                "buy_venue_available":  Decimal("0"),
-                "buy_venue_needed":     buy_amount,
+                "can_execute": False,
+                "buy_venue_available": Decimal("0"),
+                "buy_venue_needed": buy_amount,
                 "sell_venue_available": Decimal("0"),
-                "sell_venue_needed":    sell_amount,
-                "reason":               "No assets found",
+                "sell_venue_needed": sell_amount,
+                "reason": "No assets found",
             }
 
         if not buy_bal:
             return {
-                "can_execute":         False,
+                "can_execute": False,
                 "buy_venue_available": Decimal("0"),
-                "buy_venue_needed":    buy_amount,
-                "reason":              f"No asset {buy_asset} in {buy_venue} found",
+                "buy_venue_needed": buy_amount,
+                "reason": f"No asset {buy_asset} in {buy_venue} found",
             }
 
         if not sell_bal:
             return {
-                "can_execute":          False,
+                "can_execute": False,
                 "sell_venue_available": Decimal("0"),
-                "sell_venue_needed":    sell_amount,
-                "reason":               f"No asset {sell_asset} in {sell_venue} found",
+                "sell_venue_needed": sell_amount,
+                "reason": f"No asset {sell_asset} in {sell_venue} found",
             }
 
         buy_venue_available = buy_bal.free
         sell_venue_available = sell_bal.free
-        buy_venue_needed = max(buy_amount - buy_bal.free,  Decimal("0"))
+        buy_venue_needed = max(buy_amount - buy_bal.free, Decimal("0"))
         sell_venue_needed = max(sell_amount - sell_bal.free, Decimal("0"))
 
         if buy_venue_needed > 0:
             return {
-                "can_execute":         False,
+                "can_execute": False,
                 "buy_venue_available": buy_venue_available,
-                "buy_venue_needed":    buy_venue_needed,
-                "reason":              f"Not enough {buy_asset} to buy",
+                "buy_venue_needed": buy_venue_needed,
+                "reason": f"Not enough {buy_asset} to buy",
             }
 
         if sell_venue_needed > 0:
             return {
-                "can_execute":          False,
+                "can_execute": False,
                 "sell_venue_available": sell_venue_available,
-                "sell_venue_needed":    sell_venue_needed,
-                "reason":               f"Not enough {sell_asset} to sell",
+                "sell_venue_needed": sell_venue_needed,
+                "reason": f"Not enough {sell_asset} to sell",
             }
 
         return {
-            "can_execute":          True,
-            "buy_venue_available":  buy_venue_available,
-            "buy_venue_needed":     buy_venue_needed,
+            "can_execute": True,
+            "buy_venue_available": buy_venue_available,
+            "buy_venue_needed": buy_venue_needed,
             "sell_venue_available": sell_venue_available,
-            "sell_venue_needed":    sell_venue_needed,
-            "reason":               None,
+            "sell_venue_needed": sell_venue_needed,
+            "reason": None,
         }
 
     # ------------------------------------------------------------------ #
@@ -233,14 +237,14 @@ class InventoryTracker:
 
     def record_trade(
         self,
-        venue:        Venue,
-        side:         str,   # "buy" or "sell"
-        base_asset:   str,
-        quote_asset:  str,
-        base_amount:  Decimal,
+        venue: Venue,
+        side: str,  # "buy" or "sell"
+        base_asset: str,
+        quote_asset: str,
+        base_amount: Decimal,
         quote_amount: Decimal,
-        fee:          Decimal,
-        fee_asset:    str,
+        fee: Decimal,
+        fee_asset: str,
     ):
         """
         Update internal balances after a trade executes.
@@ -250,8 +254,7 @@ class InventoryTracker:
         """
         # Pre-flight
         check = (
-            self.can_execute(venue, quote_asset, quote_amount,
-                             venue, fee_asset, fee)
+            self.can_execute(venue, quote_asset, quote_amount, venue, fee_asset, fee)
             if side == "buy"
             else self.can_execute(venue, base_asset, base_amount, venue, fee_asset, fee)
         )
@@ -267,7 +270,7 @@ class InventoryTracker:
             if base_bal is None:
                 self.balances.append(Balance(venue, base_asset, base_amount))
             else:
-                base_bal.free += base_amount          # ← bug fix: Decimal is immutable,
+                base_bal.free += base_amount  # ← bug fix: Decimal is immutable,
             quote_bal.free -= quote_amount  # must reassign not call .add()
         else:
             base_bal.free -= base_amount
@@ -303,13 +306,22 @@ class InventoryTracker:
 
         for venue, assets in portfolio_venues.items():
             if asset in assets:
-                venues[venue] = {"amount": assets[asset]
-                                 ["free"], "pct": 0.0, "deviation_pct": 0.0}
+                venues[venue] = {
+                    "amount": assets[asset]["free"],
+                    "pct": 0.0,
+                    "deviation_pct": 0.0,
+                }
 
         total = sum((v["amount"] for v in venues.values()), Decimal("0"))
 
         if total == 0:
-            return {"asset": asset, "total": total, "venues": venues, "max_deviation_pct": 0.0, "needs_rebalance": False}
+            return {
+                "asset": asset,
+                "total": total,
+                "venues": venues,
+                "max_deviation_pct": 0.0,
+                "needs_rebalance": False,
+            }
 
         ideal_pct = 100 / len(venues)
         max_deviation = 0.0
@@ -323,11 +335,11 @@ class InventoryTracker:
                 max_deviation = abs(deviation)
 
         return {
-            "asset":            asset,
-            "total":            total,
-            "venues":           venues,
+            "asset": asset,
+            "total": total,
+            "venues": venues,
             "max_deviation_pct": max_deviation,
-            "needs_rebalance":  max_deviation > threshold_pct,
+            "needs_rebalance": max_deviation > threshold_pct,
         }
 
     def all_skews(self) -> list[dict]:

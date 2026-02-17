@@ -31,9 +31,7 @@ def main():
     analyzer = OrderBookAnalyzer(order_book)
     asset = symbol.split("/")[0]
     timestamp = (
-        order_book.timestamp
-        if order_book.timestamp
-        else datetime.now().isoformat()
+        order_book.timestamp if order_book.timestamp else datetime.now().isoformat()
     )
 
     print("=" * 65)
@@ -41,10 +39,8 @@ def main():
     print(f"Timestamp: {timestamp}")
     print("=" * 65)
 
-    print(
-        f"Best Bid: ${order_book.best_bid[0]} x {order_book.best_bid[1]} {asset}")
-    print(
-        f"Best Ask: ${order_book.best_ask[0]} x {order_book.best_ask[1]} {asset}")
+    print(f"Best Bid: ${order_book.best_bid[0]} x {order_book.best_bid[1]} {asset}")
+    print(f"Best Ask: ${order_book.best_ask[0]} x {order_book.best_ask[1]} {asset}")
     print(f"Mid Price: ${order_book.mid_price}")
     print(f"Spread:    ${order_book.spread} ({order_book.spread_bps}bps)")
 
@@ -55,9 +51,8 @@ def main():
     bids_cost = analyzer.walk_the_book("sell", bids)
     print(f"    Bids: {bids} {asset} (${bids_cost['total_cost']})")
 
-    asks = analyzer.depth_at_bps("ask", 10)       # ← bug fix: "ask" not "bid"
-    asks_cost = analyzer.walk_the_book(
-        "buy", asks)    # ← bug fix: asks not bids
+    asks = analyzer.depth_at_bps("ask", 10)  # ← bug fix: "ask" not "bid"
+    asks_cost = analyzer.walk_the_book("buy", asks)  # ← bug fix: asks not bids
     print(f"    Asks: {asks} {asset} (${asks_cost['total_cost']})")
 
     imbalance = analyzer.imbalance(10)

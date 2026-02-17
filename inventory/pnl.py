@@ -12,24 +12,26 @@ from inventory.tracker import Venue
 @dataclass
 class TradeLeg:
     """Single execution leg."""
-    id:        str
+
+    id: str
     timestamp: datetime
-    venue:     Venue
-    symbol:    str      # "ETH/USDT"
-    side:      str      # "buy" or "sell"
-    amount:    Decimal  # Base asset qty
-    price:     Decimal  # Execution price
-    fee:       Decimal
+    venue: Venue
+    symbol: str  # "ETH/USDT"
+    side: str  # "buy" or "sell"
+    amount: Decimal  # Base asset qty
+    price: Decimal  # Execution price
+    fee: Decimal
     fee_asset: str
 
 
 @dataclass
 class ArbRecord:
     """Complete arb trade with both legs."""
-    id:           str
-    timestamp:    datetime
-    buy_leg:      TradeLeg
-    sell_leg:     TradeLeg
+
+    id: str
+    timestamp: datetime
+    buy_leg: TradeLeg
+    sell_leg: TradeLeg
     gas_cost_usd: Decimal = field(default_factory=lambda: Decimal("0"))
 
     @property
@@ -105,8 +107,9 @@ class PnLEngine:
         total_fees = sum((t.total_fees for t in self.trades), Decimal("0"))
 
         avg_pnl_per_trade = total_pnl / len(pnls)
-        avg_pnl_bps = sum((t.net_pnl_bps for t in self.trades),
-                          Decimal("0")) / len(self.trades)
+        avg_pnl_bps = sum((t.net_pnl_bps for t in self.trades), Decimal("0")) / len(
+            self.trades
+        )
 
         winning = [p for p in pnls if p > 0]
         win_rate = round(len(winning) / len(pnls) * 100, 2)
@@ -132,17 +135,17 @@ class PnLEngine:
             pnl_by_hour[hour] = pnl_by_hour.get(hour, Decimal("0")) + t.net_pnl
 
         return {
-            "total_trades":      len(self.trades),
-            "total_pnl_usd":     total_pnl,
-            "total_fees_usd":    total_fees,
+            "total_trades": len(self.trades),
+            "total_pnl_usd": total_pnl,
+            "total_fees_usd": total_fees,
             "avg_pnl_per_trade": avg_pnl_per_trade,
-            "avg_pnl_bps":       avg_pnl_bps,
-            "win_rate":          win_rate,
-            "best_trade_pnl":    best_trade_pnl,
-            "worst_trade_pnl":   worst_trade_pnl,
-            "total_notional":    total_notional,
-            "sharpe_estimate":   sharpe_estimate,
-            "pnl_by_hour":       pnl_by_hour,
+            "avg_pnl_bps": avg_pnl_bps,
+            "win_rate": win_rate,
+            "best_trade_pnl": best_trade_pnl,
+            "worst_trade_pnl": worst_trade_pnl,
+            "total_notional": total_notional,
+            "sharpe_estimate": sharpe_estimate,
+            "pnl_by_hour": pnl_by_hour,
         }
 
     # ------------------------------------------------------------------ #
@@ -154,10 +157,10 @@ class PnLEngine:
         """
         if len(self.trades) < n:
             raise ValueError(
-                f"Not enough trades recorded (have {len(self.trades)}, need {n})")
+                f"Not enough trades recorded (have {len(self.trades)}, need {n})"
+            )
 
-        last_trades = sorted(
-            self.trades, key=lambda t: t.timestamp, reverse=True)[:n]
+        last_trades = sorted(self.trades, key=lambda t: t.timestamp, reverse=True)[:n]
 
         print("Last trades:")
         rows = []
@@ -168,15 +171,17 @@ class PnLEngine:
                 f"Buy {t.buy_leg.venue} / Sell {t.sell_leg.venue} "
                 f"${t.net_pnl:.2f} ({t.net_pnl_bps:.2f} bps) {status}"
             )
-            rows.append({
-                "id":            t.id,
-                "timestamp":     t.timestamp,
-                "symbol":        t.buy_leg.symbol,
-                "buy_venue":     t.buy_leg.venue,
-                "sell_venue":    t.sell_leg.venue,
-                "net_pnl":       t.net_pnl,
-                "net_pnl_bps":   t.net_pnl_bps,
-            })
+            rows.append(
+                {
+                    "id": t.id,
+                    "timestamp": t.timestamp,
+                    "symbol": t.buy_leg.symbol,
+                    "buy_venue": t.buy_leg.venue,
+                    "sell_venue": t.sell_leg.venue,
+                    "net_pnl": t.net_pnl,
+                    "net_pnl_bps": t.net_pnl_bps,
+                }
+            )
         return rows
 
     # ------------------------------------------------------------------ #
@@ -188,16 +193,48 @@ class PnLEngine:
                 return
 
             writer = csv.writer(f)
-            writer.writerow([
-                "id", "timestamp",
-                "buy_venue",  "buy_symbol",  "buy_amount",  "buy_price",  "buy_fee",
-                "sell_venue", "sell_symbol", "sell_amount", "sell_price", "sell_fee",
-                "gas_usd", "notional", "gross_pnl", "total_fees", "net_pnl", "net_pnl_bps",
-            ])
+            writer.writerow(
+                [
+                    "id",
+                    "timestamp",
+                    "buy_venue",
+                    "buy_symbol",
+                    "buy_amount",
+                    "buy_price",
+                    "buy_fee",
+                    "sell_venue",
+                    "sell_symbol",
+                    "sell_amount",
+                    "sell_price",
+                    "sell_fee",
+                    "gas_usd",
+                    "notional",
+                    "gross_pnl",
+                    "total_fees",
+                    "net_pnl",
+                    "net_pnl_bps",
+                ]
+            )
             for t in self.trades:
-                writer.writerow([
-                    t.id, t.timestamp.isoformat(),
-                    t.buy_leg.venue,  t.buy_leg.symbol,  t.buy_leg.amount,  t.buy_leg.price,  t.buy_leg.fee,
-                    t.sell_leg.venue, t.sell_leg.symbol, t.sell_leg.amount, t.sell_leg.price, t.sell_leg.fee,
-                    t.gas_cost_usd, t.notional, t.gross_pnl, t.total_fees, t.net_pnl, t.net_pnl_bps,
-                ])
+                writer.writerow(
+                    [
+                        t.id,
+                        t.timestamp.isoformat(),
+                        t.buy_leg.venue,
+                        t.buy_leg.symbol,
+                        t.buy_leg.amount,
+                        t.buy_leg.price,
+                        t.buy_leg.fee,
+                        t.sell_leg.venue,
+                        t.sell_leg.symbol,
+                        t.sell_leg.amount,
+                        t.sell_leg.price,
+                        t.sell_leg.fee,
+                        t.gas_cost_usd,
+                        t.notional,
+                        t.gross_pnl,
+                        t.total_fees,
+                        t.net_pnl,
+                        t.net_pnl_bps,
+                    ]
+                )
