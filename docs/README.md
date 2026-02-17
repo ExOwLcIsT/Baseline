@@ -132,6 +132,25 @@ The analyzer provides:
 - Table with amount out, execution price and price impact in % for every size
 - Max trade for 1% impact
 
+# Order Book Analysis
+
+```bash
+python -m scripts.order_book_analyzer <SYMBOL> --depth <depth>
+```
+
+Example:
+
+```bash
+python -m scripts.order_book_analyzer ETH/USDT --depth 20
+```
+
+The analyzer provides:
+
+- Best bid and ask
+- Spread and Mid price
+- depth within 10bps
+- Trade results after buying 2 and 10 tokens
+
 ## Core Components
 
 ### WalletManager

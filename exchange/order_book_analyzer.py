@@ -27,7 +27,9 @@ class OrderBookAnalyzer:
         If insufficient liquidity, fully_filled=False and fills show what IS available.
         """
         road = self.order_book.asks if side == "buy" else self.order_book.bids
-        best_order = self.order_book.best_ask if side == "buy" else self.order_book.best_bid
+        best_order = (
+            self.order_book.best_ask if side == "buy" else self.order_book.best_bid
+        )
 
         levels = 0
         total_cost = Decimal(0)
@@ -42,7 +44,7 @@ class OrderBookAnalyzer:
             fill_qty = min(order_qty, qty_left)
             cost = order_price * fill_qty
 
-            fills.append({'price': order_price, 'qty': fill_qty, 'cost': cost})
+            fills.append({"price": order_price, "qty": fill_qty, "cost": cost})
             total_cost += cost
             qty_left -= order_qty
             levels += 1
@@ -55,12 +57,12 @@ class OrderBookAnalyzer:
         slippage_bps = round(slippage / best_order[0] * Decimal(10_000), 2)
 
         return {
-            'avg_price':       avg_price,
-            'total_cost':      total_cost,
-            'slippage_bps':    slippage_bps,
-            'levels_consumed': levels,
-            'fully_filled':    qty_left <= 0,
-            'fills':           fills,
+            "avg_price": avg_price,
+            "total_cost": total_cost,
+            "slippage_bps": slippage_bps,
+            "levels_consumed": levels,
+            "fully_filled": qty_left <= 0,
+            "fills": fills,
         }
 
     def depth_at_bps(self, side: str, bps: int) -> Decimal:
@@ -114,11 +116,11 @@ class OrderBookAnalyzer:
         = (avg_ask_fill - avg_bid_fill) / mid_price * 10000
         This is the TRUE cost of immediacy for your trade size.
         """
-        buy = self.walk_the_book("buy",  qty)
+        buy = self.walk_the_book("buy", qty)
         sell = self.walk_the_book("sell", qty)
 
-        if not buy['fully_filled'] or not sell['fully_filled']:
-            return Decimal('Infinity')
+        if not buy["fully_filled"] or not sell["fully_filled"]:
+            return Decimal("Infinity")
 
-        spread = buy['avg_price'] - sell['avg_price']
+        spread = buy["avg_price"] - sell["avg_price"]
         return round(spread / self.order_book.mid_price * Decimal(10_000), 2)
