@@ -6,13 +6,16 @@ from typing import Optional
 import time
 import uuid
 
+
 class Direction(Enum):
     BUY_CEX_SELL_DEX = "buy_cex_sell_dex"
     BUY_DEX_SELL_CEX = "buy_dex_sell_cex"
 
+
 @dataclass
 class Signal:
     """A validated arbitrage opportunity ready for execution."""
+
     signal_id: str
     pair: str
     direction: Direction
@@ -34,22 +37,22 @@ class Signal:
     within_limits: bool
 
     @classmethod
-    def create(cls, pair: str, direction: Direction, **kwargs) -> 'Signal':
+    def create(cls, pair: str, direction: Direction, **kwargs) -> "Signal":
         return cls(
             signal_id=f"{pair.replace('/', '')}_{uuid.uuid4().hex[:8]}",
             pair=pair,
             direction=direction,
             timestamp=time.time(),
-            **kwargs
+            **kwargs,
         )
 
     def is_valid(self) -> bool:
         return (
-            time.time() < self.expiry and
-            self.inventory_ok and
-            self.within_limits and
-            self.expected_net_pnl > 0 and
-            self.score > 0
+            time.time() < self.expiry
+            and self.inventory_ok
+            and self.within_limits
+            and self.expected_net_pnl > 0
+            and self.score > 0
         )
 
     def age_seconds(self) -> float:

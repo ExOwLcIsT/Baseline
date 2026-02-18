@@ -23,13 +23,12 @@ class SignalScorer:
 
     def score(self, signal: Signal, inventory_state: list[dict]) -> float:
         scores = {
-            'spread':    self._score_spread(signal.spread_bps),
-            'liquidity': self._score_liquidity(signal.spread_bps),
-            'inventory': self._score_inventory(signal, inventory_state),
-            'history':   self._score_history(signal.pair),
+            "spread": self._score_spread(signal.spread_bps),
+            "liquidity": self._score_liquidity(signal.spread_bps),
+            "inventory": self._score_inventory(signal, inventory_state),
+            "history": self._score_history(signal.pair),
         }
-        weighted = sum(scores[k] * getattr(self.config,
-                       f'{k}_weight') for k in scores)
+        weighted = sum(scores[k] * getattr(self.config, f"{k}_weight") for k in scores)
         return round(max(0, min(100, weighted)), 1)
 
     def _score_liquidity(self, spread_bps: Decimal) -> float:
@@ -50,9 +49,9 @@ class SignalScorer:
         return (spread - self.config.min_spread_bps) / range_bps * 100
 
     def _score_inventory(self, signal: Signal, skews: list[dict]) -> float:
-        base = signal.pair.split('/')[0]
-        relevant = [s for s in skews if s['asset'] == base]
-        if any(s['status'] is True for s in relevant):
+        base = signal.pair.split("/")[0]
+        relevant = [s for s in skews if s["asset"] == base]
+        if any(s["status"] is True for s in relevant):
             return 20
         return 60
 

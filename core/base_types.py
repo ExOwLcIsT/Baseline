@@ -179,8 +179,8 @@ class TransactionReceipt:
     @property
     def tx_fee(self) -> TokenAmount:
         """Returns transaction fee as TokenAmount."""
-        return TokenAmount.fromRaw(
-            self.gasUsed * self.effectiveGasPrice,
+        return TokenAmount.from_raw(
+            self.gas_used * self.effective_gas_price,
             18,
             "WETH",
         )
