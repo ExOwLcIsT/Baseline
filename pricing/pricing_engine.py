@@ -51,6 +51,11 @@ class PricingEngine:
 
         pair.refresh_reserves(self.client)
 
+    async def refresh_all_pools(self):
+        """Refresh single pool's reserves."""
+        for pair in self.pools.values():
+            await pair.refresh_reserves(self.client)
+
     def get_quote(
         self, token_in: Token, token_out: Token, amount_in: int, gas_price_gwei: int
     ) -> Quote:
@@ -95,7 +100,13 @@ class PricingEngine:
                 ):
                     self.refreshPool(pool.address)
 
-    async def real_dex_swap(self, size: Decimal, token_in: Token, token_out: Token, gas_price: str = "medium"):
+    async def real_dex_swap(
+        self,
+        size: Decimal,
+        token_in: Token,
+        token_out: Token,
+        gas_price: str = "medium",
+    ):
         # --- amount conversion ---
         decimals = 0
         token_decimals = token_in.decimals
@@ -103,7 +114,7 @@ class PricingEngine:
             token_decimals //= 10
             decimals += 1
 
-        amount_in = int(size * Decimal(10 ** decimals))
+        amount_in = int(size * Decimal(10**decimals))
 
         # --- simulate ---
         simulated: Quote = await self.get_quote(token_in, token_out, amount_in, 0)
@@ -120,45 +131,60 @@ class PricingEngine:
                 abi=WETH_ABI,
             )
             wrap_amount = self.client.w3.to_wei(size, "ether")
-            tx = weth.functions.deposit().build_transaction({
-                "from":  wallet.address,
-                "value": wrap_amount,
-                "nonce": self.client.get_nonce(wallet.address),
-                "gas":   60_000,
-                "gasPrice": self.client.get_gas_price().get_max_fee(),
-                "chainId": os.getenv("CHAID_ID", 1)
-            })
+            tx = weth.functions.deposit().build_transaction(
+                {
+                    "from": wallet.address,
+                    "value": wrap_amount,
+                    "nonce": self.client.get_nonce(wallet.address),
+                    "gas": 60_000,
+                    "gasPrice": self.client.get_gas_price().get_max_fee(),
+                    "chainId": os.getenv("CHAID_ID", 1),
+                }
+            )
             signed = wallet.sign_transaction(tx)
             tx_hash = self.client.send_transaction(signed.raw_transaction)
             self.client.wait_for_receipt(tx_hash)
 
         # --- build swap calldata ---
         router = self.client.w3.eth.contract(
-            address=router_address, abi=UNISWAP_V2_ROUTER_ABI_SWAP)
+            address=router_address, abi=UNISWAP_V2_ROUTER_ABI_SWAP
+        )
         path = [token.address.checksum for token in simulated.route.path]
 
         value = 0 if token_in.address.checksum != WETH_ADDRESS else amount_in
 
         tx = router.functions.swapExactTokensForTokens(
             amount_in,
-            0,          # amountOutMin — see review notes below
+            0,  # amountOutMin — see review notes below
             path,
             router_address,
             deadline,
-        ).build_transaction({
-            "from":     wallet.address,
-            "value":    value,
-            "nonce":    self.client.get_nonce(wallet.address),
-            "gasPrice": self.client.get_gas_price("medium"),
-
-            "chainId": os.getenv("CHAID_ID", 1)
-        })
+        ).build_transaction(
+            {
+                "from": wallet.address,
+                "value": value,
+                "nonce": self.client.get_nonce(wallet.address),
+                "gasPrice": self.client.get_gas_price("medium"),
+                "chainId": os.getenv("CHAID_ID", 1),
+            }
+        )
         tx["gas"] = self.client.estimate_gas(tx)
 
         signed_tx = wallet.sign_transaction(tx)
         tx_hash = self.client.send_transaction(signed_tx.raw_transaction)
+        return {"price": simulated.simulated_output / token_out.decimals / size}
+
+    async def get_prices(self, token_in: Token, token_out: Token, amount_in: int,):
+
+        await self.refresh_all_pools()
+        route, net_output = self.router.find_best_route(
+            token_in, token_out, amount_in, 0
+        )
+        dex_sell = route.get_output(amount_in=amount_in)
+        dex_buy = route.get_input(amount_out=amount_in)
         return {
-            "price": simulated.simulated_output / token_out.decimals / size
+            "dex_buy": dex_buy,
+            "dex_sell": dex_sell
         }
 
 
@@ -180,27 +206,39 @@ class Quote:
         return diff < tolerance
 
 
-WETH_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+WETH_ADDRESS = os.getenv("WETH")
 UNISWAP_V2_ROUTER_ABI_SWAP = [
     {
         "name": "swapExactTokensForTokens",
         "type": "function",
         "inputs": [
-            {"name": "amountIn",     "type": "uint256"},
+            {"name": "amountIn", "type": "uint256"},
             {"name": "amountOutMin", "type": "uint256"},
-            {"name": "path",         "type": "address[]"},
-            {"name": "to",           "type": "address"},
-            {"name": "deadline",     "type": "uint256"},
+            {"name": "path", "type": "address[]"},
+            {"name": "to", "type": "address"},
+            {"name": "deadline", "type": "uint256"},
         ],
         "outputs": [{"name": "amounts", "type": "uint256[]"}],
     }
 ]
 WETH_ABI = [
-    {"name": "deposit",  "type": "function", "inputs": [],
-     "outputs": [], "stateMutability": "payable"},
-    {"name": "withdraw", "type": "function",
-     "inputs": [{"name": "wad", "type": "uint256"}], "outputs": []},
-    {"name": "balanceOf", "type": "function",
-     "inputs": [{"name": "", "type": "address"}],
-     "outputs": [{"name": "", "type": "uint256"}]},
+    {
+        "name": "deposit",
+        "type": "function",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "payable",
+    },
+    {
+        "name": "withdraw",
+        "type": "function",
+        "inputs": [{"name": "wad", "type": "uint256"}],
+        "outputs": [],
+    },
+    {
+        "name": "balanceOf",
+        "type": "function",
+        "inputs": [{"name": "", "type": "address"}],
+        "outputs": [{"name": "", "type": "uint256"}],
+    },
 ]

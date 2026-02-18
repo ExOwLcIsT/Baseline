@@ -1,3 +1,4 @@
+import os
 from core.base_types import Address
 from typing import Optional
 from pricing.AMM import UniswapV2Pair
@@ -52,7 +53,8 @@ class RouteFinder:
                 routes.append(Route(pools_path.copy(), tokens_path.copy()))
                 return
 
-            neighbors: dict[UniswapV2Pair, Token] = self.graph.get(current.name)
+            neighbors: dict[UniswapV2Pair,
+                            Token] = self.graph.get(current.name)
 
             if len(neighbors) == 0:
                 return
@@ -78,12 +80,12 @@ class RouteFinder:
         return routes
 
     def convert_to_output_token(self, gas_wei: int, token_out: Token) -> int:
-        if token_out.address.checksum == "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2":
+        if token_out.address.checksum == os.getenv("WETH"):
             return gas_wei
         ethToken = Token(
             "WETH",
             10**18,
-            Address.from_string("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+            Address.from_string(os.getenv("WETH")),
         )
         routes = self.find_all_routes(ethToken, token_out, 5)
         minGas = routes[0].get_output(gas_wei)
@@ -112,9 +114,9 @@ class RouteFinder:
         bestNetOutput = 0
         for route in routes:
             grossOutput = route.get_output(amount_in)
-            print("amount_in: " + str(amount_in))
             gasCost = route.estimate_gas() * gas_price_gwei * 1_000_000_000
-            gasCostInOutputToken = self.convert_to_output_token(gasCost, token_out)
+            gasCostInOutputToken = self.convert_to_output_token(
+                gasCost, token_out)
             netOutput = grossOutput - gasCostInOutputToken
             if netOutput > bestNetOutput:
                 bestNetOutput = netOutput

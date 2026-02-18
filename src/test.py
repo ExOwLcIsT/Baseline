@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from chain.chain_client import ChainClient
 from core.base_types import Address
+from pricing.AMM import UniswapV2Pair
 from pricing.pricing_engine import PricingEngine
 from pricing.token import Token
 
@@ -14,7 +15,6 @@ load_dotenv()
 # wallet = WalletManager.fromEnv()
 # print(wallet.address)
 # ChainClient connects to sepolia.infura.io
-cc = ChainClient("http://127.0.0.1:8545")
 
 # nonce = await cc.getNonce(Address.from_string(wallet.address))
 
@@ -100,6 +100,7 @@ SHIB = Token(
 # })
 
 # await monitor.start()
+cc = ChainClient(os.getenv("INFURA_RPC_URL"))
 
 engine = PricingEngine(cc, "http://127.0.0.1:8545", os.getenv("INFURA_WS_RPC"))
 asyncio.run(
@@ -117,6 +118,7 @@ asyncio.run(
         ]
     )
 )
+
 
 # engine.swap(Decimal(0.1), ETHToken, USDCToken)
 quote = engine.get_quote(ETHToken, USDToken, 2 * 10**18, 0)

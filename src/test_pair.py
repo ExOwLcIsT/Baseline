@@ -3,10 +3,12 @@
 import os
 from web3 import Web3
 
-FACTORY_ADDRESS = "0xf1D7CC64Fb4452F05c498126312eBE29f30Fbcf9"  # Uniswap V2 Factory on Arbitrum
+FACTORY_ADDRESS = (
+    "0xf1D7CC64Fb4452F05c498126312eBE29f30Fbcf9"  # Uniswap V2 Factory on Arbitrum
+)
 
-WETH  = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"  # WETH on Arbitrum
-USDC  = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8"  # USDC on Arbitrum
+WETH = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"  # WETH on Arbitrum
+USDT = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"  # USDT on Arbitrum
 
 FACTORY_ABI = [
     {
@@ -41,8 +43,8 @@ PAIR_ABI = [
         "type": "function",
         "inputs": [],
         "outputs": [
-            {"name": "reserve0",           "type": "uint112"},
-            {"name": "reserve1",           "type": "uint112"},
+            {"name": "reserve0", "type": "uint112"},
+            {"name": "reserve1", "type": "uint112"},
             {"name": "blockTimestampLast", "type": "uint32"},
         ],
         "stateMutability": "view",
@@ -84,32 +86,35 @@ def get_pair(
     ).call()
 
     if pair_address == "0x0000000000000000000000000000000000000000":
-        raise ValueError(f"No pair found for {token_a} / {token_b} on factory {factory_address}")
+        raise ValueError(
+            f"No pair found for {token_a} / {token_b} on factory {factory_address}"
+        )
 
     pair = w3.eth.contract(
         address=Web3.to_checksum_address(pair_address),
         abi=PAIR_ABI,
     )
 
-    token0                            = pair.functions.token0().call()
-    token1                            = pair.functions.token1().call()
-    reserve0, reserve1, timestamp     = pair.functions.getReserves().call()
+    token0 = pair.functions.token0().call()
+    token1 = pair.functions.token1().call()
+    reserve0, reserve1, timestamp = pair.functions.getReserves().call()
 
     return {
-        "pair":      pair_address,
-        "token0":    token0,
-        "token1":    token1,
-        "reserve0":  reserve0,
-        "reserve1":  reserve1,
+        "pair": pair_address,
+        "token0": token0,
+        "token1": token1,
+        "reserve0": reserve0,
+        "reserve1": reserve1,
         "timestamp": timestamp,
     }
 
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
+
     load_dotenv()
 
-    result = get_pair(WETH, USDC, rpc_url=os.environ["INFURA_RPC_URL"])
+    result = get_pair(WETH, USDT, rpc_url=os.environ["INFURA_RPC_URL"])
 
     print(f"Pair address : {result['pair']}")
     print(f"Token0       : {result['token0']}")

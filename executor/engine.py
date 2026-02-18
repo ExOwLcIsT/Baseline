@@ -59,8 +59,13 @@ class ExecutorConfig:
 class Executor:
     """Execute arbitrage trades across CEX and DEX."""
 
-    def __init__(self, exchange_client, pricing_module, inventory_tracker,
-                 config: Optional[ExecutorConfig] = None):
+    def __init__(
+        self,
+        exchange_client,
+        pricing_module,
+        inventory_tracker,
+        config: Optional[ExecutorConfig] = None,
+    ):
         self.exchange: ExchangeClient = exchange_client
         self.pricing: PricingEngine = pricing_module
         self.inventory: InventoryTracker = inventory_tracker
@@ -111,40 +116,39 @@ class Executor:
 
         # Leg 1: CEX
         ctx.state = ExecutorState.LEG1_PENDING
-        ctx.leg1_venue = 'cex'
+        ctx.leg1_venue = "cex"
 
         try:
             leg1 = await asyncio.wait_for(
-                self._execute_cex_leg(signal),
-                timeout=self.config.leg1_timeout
+                self._execute_cex_leg(signal), timeout=self.config.leg1_timeout
             )
         except asyncio.TimeoutError:
             ctx.state = ExecutorState.FAILED
             ctx.error = "CEX timeout"
             return ctx
 
-        if not leg1['success']:
+        if not leg1["success"]:
             ctx.state = ExecutorState.FAILED
-            ctx.error = leg1.get('error', 'CEX rejected')
+            ctx.error = leg1.get("error", "CEX rejected")
             return ctx
 
-        if leg1['filled'] / signal.size < self.config.min_fill_ratio:
+        if leg1["filled"] / signal.size < self.config.min_fill_ratio:
             ctx.state = ExecutorState.FAILED
             ctx.error = f"Partial fill below threshold"
             return ctx
 
-        ctx.leg1_fill_price = leg1['price']
-        ctx.leg1_fill_size = leg1['filled']
+        ctx.leg1_fill_price = leg1["price"]
+        ctx.leg1_fill_size = leg1["filled"]
         ctx.state = ExecutorState.LEG1_FILLED
 
         # Leg 2: DEX
         ctx.state = ExecutorState.LEG2_PENDING
-        ctx.leg2_venue = 'dex'
+        ctx.leg2_venue = "dex"
 
         try:
             leg2 = await asyncio.wait_for(
                 self._execute_dex_leg(signal, ctx.leg1_fill_size),
-                timeout=self.config.leg2_timeout
+                timeout=self.config.leg2_timeout,
             )
         except asyncio.TimeoutError:
             ctx.state = ExecutorState.UNWINDING
@@ -153,15 +157,15 @@ class Executor:
             ctx.error = "DEX timeout - unwound"
             return ctx
 
-        if not leg2['success']:
+        if not leg2["success"]:
             ctx.state = ExecutorState.UNWINDING
             await self._unwind(ctx)
             ctx.state = ExecutorState.FAILED
             ctx.error = f"DEX failed - unwound"
             return ctx
 
-        ctx.leg2_fill_price = leg2['price']
-        ctx.leg2_fill_size = leg2['filled']
+        ctx.leg2_fill_price = leg2["price"]
+        ctx.leg2_fill_size = leg2["filled"]
         ctx.actual_net_pnl = self._calculate_pnl(ctx)
         ctx.state = ExecutorState.DONE
         return ctx
@@ -172,35 +176,35 @@ class Executor:
 
         # Leg 1: DEX
         ctx.state = ExecutorState.LEG1_PENDING
-        ctx.leg1_venue = 'dex'
+        ctx.leg1_venue = "dex"
 
         try:
             leg1 = await asyncio.wait_for(
                 self._execute_dex_leg(signal, signal.size),
-                timeout=self.config.leg1_timeout
+                timeout=self.config.leg1_timeout,
             )
         except asyncio.TimeoutError:
             ctx.state = ExecutorState.FAILED
             ctx.error = "DEX timeout"
             return ctx
 
-        if not leg1['success']:
+        if not leg1["success"]:
             ctx.state = ExecutorState.FAILED
             ctx.error = "DEX failed (no cost via Flashbots)"
             return ctx
 
-        ctx.leg1_fill_price = leg1['price']
-        ctx.leg1_fill_size = leg1['filled']
+        ctx.leg1_fill_price = leg1["price"]
+        ctx.leg1_fill_size = leg1["filled"]
         ctx.state = ExecutorState.LEG1_FILLED
 
         # Leg 2: CEX
         ctx.state = ExecutorState.LEG2_PENDING
-        ctx.leg2_venue = 'cex'
+        ctx.leg2_venue = "cex"
 
         try:
             leg2 = await asyncio.wait_for(
                 self._execute_cex_leg(signal, ctx.leg1_fill_size),
-                timeout=self.config.leg1_timeout
+                timeout=self.config.leg1_timeout,
             )
         except asyncio.TimeoutError:
             ctx.state = ExecutorState.UNWINDING
@@ -209,15 +213,15 @@ class Executor:
             ctx.error = "CEX timeout after DEX - unwound"
             return ctx
 
-        if not leg2['success']:
+        if not leg2["success"]:
             ctx.state = ExecutorState.UNWINDING
             await self._unwind(ctx)
             ctx.state = ExecutorState.FAILED
             ctx.error = "CEX failed after DEX - unwound"
             return ctx
 
-        ctx.leg2_fill_price = leg2['price']
-        ctx.leg2_fill_size = leg2['filled']
+        ctx.leg2_fill_price = leg2["price"]
+        ctx.leg2_fill_size = leg2["filled"]
         ctx.actual_net_pnl = self._calculate_pnl(ctx)
         ctx.state = ExecutorState.DONE
         return ctx
@@ -227,39 +231,40 @@ class Executor:
         if self.config.simulation_mode:
             await asyncio.sleep(0.1)
             return {
-                'success': True,
-                'price': signal.cex_price * 1.0001,
-                'filled': actual_size,
+                "success": True,
+                "price": signal.cex_price * 1.0001,
+                "filled": actual_size,
             }
         # Real execution via exchange client
-        side = 'buy' if signal.direction == Direction.BUY_CEX_SELL_DEX else 'sell'
+        side = "buy" if signal.direction == Direction.BUY_CEX_SELL_DEX else "sell"
         result = self.exchange.create_limit_ioc_order(
-            symbol=signal.pair, side=side, amount=actual_size,
-            price=signal.cex_price * 1.001, order_type='limit', time_in_force='IOC'
+            symbol=signal.pair,
+            side=side,
+            amount=actual_size,
+            price=signal.cex_price * 1.001,
+            order_type="limit",
+            time_in_force="IOC",
         )
-        return {'success': result.get("status") == 'filled', 'price': float(result['price']),
-                'filled': float(result["filled"]), 'error': result["status"]}
+        return {
+            "success": result.get("status") == "filled",
+            "price": float(result["price"]),
+            "filled": float(result["filled"]),
+            "error": result["status"],
+        }
 
     async def _execute_dex_leg(self, signal: Signal, size: float) -> dict:
         if self.config.simulation_mode:
             await asyncio.sleep(0.5)
-            return {'success': True, 'price': signal.dex_price * 0.9998, 'filled': size}
+            return {"success": True, "price": signal.dex_price * 0.9998, "filled": size}
         [base, quote] = signal.pair.split("/")
 
         tokenIn = Tokens[base]
         tokenOut = Tokens[quote]
         try:
             res = await self.pricing.real_dex_swap(size, tokenIn, tokenOut)
-            return {
-                'success': True,
-                'price' : res.get("price")
-            }
+            return {"success": True, "price": res.get("price")}
         except:
-            return {
-                'success': False,
-                'price': 0,
-                'filled': 0
-            }
+            return {"success": False, "price": 0, "filled": 0}
 
     async def _unwind(self, ctx: ExecutionContext):
         """Market sell to flatten stuck position."""
@@ -267,12 +272,12 @@ class Executor:
             await asyncio.sleep(0.1)
             return
         if ctx.get("leg1_fill_size", 0) == 0:
-            return {'status': "nothing_to_unwind"}
+            return {"status": "nothing_to_unwind"}
 
         signal = ctx.signal
 
         # Determine what we're stuck with
-        if (signal.direction == Direction.BUY_CEX_SELL_DEX):
+        if signal.direction == Direction.BUY_CEX_SELL_DEX:
             # bought on CEX — sell it back
             unwind_side = "sell"
             unwind_venue = "cex"
@@ -298,16 +303,16 @@ class Executor:
 
             unwindPnl = self.calculateUnwindPnl(ctx, result)
             return {
-                'status': "unwound",
-                'fill_price': result.avgFillPrice,
-                'pnl': unwindPnl,
+                "status": "unwound",
+                "fill_price": result.avgFillPrice,
+                "pnl": unwindPnl,
             }
         except Exception as e:
             print(f"Unwind failed: {e}")
             return {
-                'status': "unwindFailed",
-                'error': e,
-                'manual_action_required': True,
+                "status": "unwindFailed",
+                "error": e,
+                "manual_action_required": True,
             }
 
     def _calculate_pnl(self, ctx: ExecutionContext) -> float:

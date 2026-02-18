@@ -91,7 +91,7 @@ class TransactionBuilder:
                 gas_limit=self.params["gas_limit"],
                 max_fee_per_gas=self.params["max_fee_per_gas"],
                 max_priority_fee=self.params["max_priority_fee"],
-                chain_id=self.params.get("chain_id",1),
+                chain_id=self.params.get("chain_id", 1),
             )
         except:
             return None

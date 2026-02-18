@@ -1,7 +1,5 @@
 import asyncio
-import time
 
-import websockets
 from configs.config import BINANCE_CONFIG
 from exchange.exchange_client import ExchangeClient
 from exchange.order_book import OrderBook

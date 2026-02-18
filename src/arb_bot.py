@@ -8,6 +8,7 @@ from decimal import Decimal
 from dotenv import load_dotenv
 
 from chain.chain_client import ChainClient
+from configs.config import BINANCE_CONFIG
 from core.base_types import Address
 from exchange.exchange_client import ExchangeClient
 from executor.engine import Executor, ExecutorConfig, ExecutorState
@@ -16,11 +17,6 @@ from pricing.pricing_engine import PricingEngine
 from strategy.fees import FeeStructure
 from strategy.generator import SignalGenerator
 from strategy.scorer import SignalScorer
-
-BINANCE_CONFIG = {
-    "apiKey": os.getenv("BINANCE_API_KEY"),
-    "secret": os.getenv("BINANCE_SECRET"),
-}
 
 
 class ArbBot:
@@ -33,6 +29,7 @@ class ArbBot:
         fees: FeeStructure,
         generator: SignalGenerator,
         pairs: list[str],
+        dex_pairs: list[str],
         trade_size: Decimal,
     ):
         self.exchange = exchange
@@ -42,28 +39,28 @@ class ArbBot:
         self.fees = fees
         self.generator = generator
         self.pairs = pairs
+        self.dex_pairs = dex_pairs
         self.trade_size = trade_size
         self.running = False
 
     @classmethod
     async def create(cls, config: dict) -> "ArbBot":
-        exchange = await ExchangeClient.from_config(BINANCE_CONFIG)
+        exchange = ExchangeClient(BINANCE_CONFIG)
+        await exchange.start()
         inventory = InventoryTracker()
         fees = FeeStructure()
 
-        sender = Address.from_string(os.environ["WALLET_ADDRESS"])
         chain_client = ChainClient(os.environ["INFURA_RPC_URL"])
         pricing_engine = PricingEngine(
             chain_client,
             os.environ["CHAIN_URL"],
-            os.environ["INFURA_WS_RPC"],
-            sender,
+            os.environ["INFURA_WS_RPC"]
         )
 
         pair_addresses = [
-            Address.from_string(a)
-            for a in os.environ["UNISWAP_PAIR_ADDRESSES"].split()
+            Address.from_string(a) for a in os.environ["UNISWAP_PAIR_ADDRESSES"].split()
         ]
+        
         await pricing_engine.load_pools(pair_addresses)
 
         generator = SignalGenerator(
@@ -76,14 +73,16 @@ class ArbBot:
         scorer = SignalScorer()
 
         exec_config = ExecutorConfig(
-            simulation_mode=config.get("simulation", True)
-        )
+            simulation_mode=config.get("simulation", True))
         executor = Executor(exchange, pricing_engine, inventory, exec_config)
 
         pairs = config.get("pairs")
+        dex_pairs = config.get("dex_pairs")
         trade_size = Decimal(str(config.get("trade_size")))
 
-        return cls(exchange, inventory, scorer, executor, fees, generator, pairs, trade_size)
+        return cls(
+            exchange, inventory, scorer, executor, fees, generator, pairs, dex_pairs, trade_size
+        )
 
     async def run(self):
         self.running = True
@@ -103,25 +102,26 @@ class ArbBot:
             logging.info("Circuit breaker is open")
             return
 
-        await asyncio.gather(*[self._process_pair(pair) for pair in self.pairs])
+        await asyncio.gather(*[self._process_pair(self.pairs[i], self.dex_pairs[i]) for i in range(len(self.pairs))])
 
-    async def _process_pair(self, pair: str):
-        signal = await self.generator.generate(pair, self.trade_size)
+    async def _process_pair(self, cex_pair: str, dex_pair: str):
+        signal = await self.generator.generate(cex_pair, dex_pair,  self.trade_size)
         if signal is None:
             return
-
+        print("YES")
+        return
         signal.score = self.scorer.score(signal, self.inventory.all_skews())
         if signal.score < 60:
             return
 
         logging.info(
-            f"Signal: {pair} spread={round(float(signal.spread_bps), 2)}bps "
+            f"Signal: {cex_pair} spread={round(float(signal.spread_bps), 2)}bps "
             f"score={signal.score}"
         )
 
         ctx = await self.executor.execute(signal)
 
-        self.scorer.record_result(pair, ctx.state == ExecutorState.DONE)
+        self.scorer.record_result(cex_pair, ctx.state == ExecutorState.DONE)
 
         if ctx.state == ExecutorState.DONE:
             logging.info(f"SUCCESS: PnL={round(ctx.actual_net_pnl, 4)}")
@@ -131,13 +131,16 @@ class ArbBot:
         await self.sync_balances()
 
     async def sync_balances(self):
-        balances = await self.exchange.fetch_balance()
+        balances = self.exchange.fetch_balance()
         self.inventory.update_from_cex(Venue.BINANCE, balances)
         # TODO: replace with real on-chain wallet query
-        self.inventory.update_from_wallet(Venue.WALLET, {
-            "ETH":  Decimal("20"),
-            "USDT": Decimal("100000"),
-        })
+        self.inventory.update_from_wallet(
+            Venue.WALLET,
+            {
+                "ETH": Decimal("20"),
+                "USDT": Decimal("100000"),
+            },
+        )
 
     def stop(self):
         self.running = False
@@ -146,11 +149,13 @@ class ArbBot:
 async def main():
     load_dotenv()
     pairs = os.getenv("TOKEN_PAIRS").split(" ")
+    dex_pairs = os.getenv("DEX_TOKEN_PAIRS").split(" ")
 
     config = {
-        "pairs":        pairs,
-        "trade_size":   0.1,
-        "simulation":   True,
+        "pairs": pairs,
+        "dex_pairs": dex_pairs,
+        "trade_size": 0.1,
+        "simulation": True,
         "signal_config": {},
     }
     bot = await ArbBot.create(config)

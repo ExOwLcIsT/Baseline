@@ -39,7 +39,7 @@ class UniswapV2Pair:
         denominator = reserve_in * 10000 + amount_in_with_fee
         amount_out = numerator # denominator
         """
-        if not token_in.__eq__(self.token0) and not token_in.__eq__(self.token1):
+        if not (token_in.__eq__(self.token0)) and (not token_in.__eq__(self.token1)):
             raise Exception("Invalid token")
         direction = token_in.__eq__(self.token0)
         amountInWithFee = amount_in * (10000 - self.feeBPS)

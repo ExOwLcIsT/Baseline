@@ -7,7 +7,7 @@ from core.base_types import Address
 from exchange.exchange_client import ExchangeClient
 from exchange.order_book_analyzer import OrderBookAnalyzer
 from inventory.tracker import InventoryTracker
-from pricing.pricing_engine import PricingEngine, Quote
+from pricing.pricing_engine import PricingEngine
 from strategy.fees import FeeStructure
 from strategy.signal import Direction, Signal
 from pricing.token import Token
@@ -35,15 +35,17 @@ class SignalGenerator:
 
         self.last_signal_time: dict[str, Decimal] = {}
 
-    async def generate(self, pair: str, size: Decimal) -> Optional[Signal]:
+    async def generate(self, cex_pair: str, dex_pair: str, size: Decimal) -> Optional[Signal]:
         """
         Attempt to generate a signal for the given pair and size.
         Returns Signal if opportunity found and validated, None otherwise.
         """
-        if self._in_cooldown(pair):
+        if self._in_cooldown(cex_pair):
             return None
 
-        prices = await self._fetch_prices(pair, size)
+        prices = await self._fetch_prices(cex_pair, dex_pair, size)
+        print(prices)
+
         if prices is None:
             return None
 
@@ -121,41 +123,40 @@ class SignalGenerator:
                 >= size * price * 1.01
             )
 
-    async def _fetch_prices(self, pair: str, size: Decimal):
+    async def _fetch_prices(self, cex_pair: str, dex_pair: str, size: Decimal):
         try:
-            ob = await self.exchange.fetch_order_book(pair)
+            base, quote = dex_pair.split("/")
+            ob = self.exchange.fetch_order_book(cex_pair)
+
             if ob is None:
                 raise Exception("Order book is None")
-            analyzer = OrderBookAnalyzer(ob)
 
+            analyzer = OrderBookAnalyzer(ob)
             bid_walk_result = analyzer.walk_the_book("sell", size)
             ask_walk_result = analyzer.walk_the_book("buy", size)
-            base, quote = pair.split("/")
+            amount_in = int(size * Tokens[base].decimals)
 
-            amount_in = size * Tokens[base].decimals
+            dex_prices = await self.pricing.get_prices(
+                token_in=Tokens[base], token_out=Tokens[quote], amount_in=amount_in)
 
-            simulated: Quote = await self.pricing.get_quote(
-                Tokens[base],
-                Tokens[quote],
-                amount_in,
-                0,
-            )
+            dex_buy = dex_prices.get("dex_buy") / \
+                Tokens[quote].decimals / float(size)
 
-            dex_buy = (
-                simulated.route.get_input(
-                    amount_in) / Tokens[quote].decimals / size
-            )
-
-            dex_sell = simulated.expectedOutput / Tokens[quote].decimals / size
-
+            dex_sell = dex_prices.get("dex_sell") / \
+                Tokens[quote].decimals / float(size)
+            cex_bid = bid_walk_result.get("avg_price")
+            cex_ask = ask_walk_result.get("avg_price")
+            if cex_bid == 0 or cex_ask == 0:
+                return None
             return {
-                "cex_bid": bid_walk_result.avgPrice,
-                "cex_ask": ask_walk_result.avgPrice,
-                "dex_buy": dex_buy,
-                "dex_sell": dex_sell,
+                "cex_bid": cex_bid,
+                "cex_ask": cex_ask,
+                "dex_buy": Decimal(dex_buy),
+                "dex_sell": Decimal(dex_sell),
             }
         except Exception as e:
-            print(e)
+            print("Error fetching prices")
+            print("Error", e)
             return None
 
 
@@ -168,12 +169,22 @@ Tokens: dict[str, Token] = {
     "ETH": Token(
         "WETH",
         10**18,
-        Address.from_string("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
+        Address.from_string("0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"),
+    ),
+    "WETH": Token(
+        "WETH",
+        10**18,
+        Address.from_string("0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"),
     ),
     "USDT": Token(
         "USDT",
         10**6,
         Address.from_string("0xdAC17F958D2ee523a2206206994597C13D831ec7"),
+    ),
+    "USD₮0": Token(
+        "USDT",
+        10**6,
+        Address.from_string("0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"),
     ),
     "SHIB": Token(
         "SHIB",

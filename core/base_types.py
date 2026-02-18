@@ -48,9 +48,9 @@ class Address:
         lower = self.value.lower()
         return lower
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self: Address, other: Address) -> bool:
         # Case-insensitive comparison
-        return self.lower == other.lower
+        return self.lower.__eq__(other.lower)
 
 
 @dataclass(frozen=True)

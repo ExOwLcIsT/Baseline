@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import os
 import time
 from typing import Optional
 
@@ -97,7 +98,7 @@ class ForkSimulator:
     # --------------------------------------------------
 
     def _wrap_eth(self, sender: Address, amount_wei: int):
-        WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        WETH = os.getenv("WETH")
         weth: Contract = self.w3.eth.contract(address=WETH, abi=WETH_ABI)
 
         tx = weth.functions.deposit().build_transaction(
@@ -139,7 +140,8 @@ class ForkSimulator:
             ).build_transaction({"from": sender.checksum})
 
             gas = self.w3.eth.estimate_gas(tx)
-
+            print("gas")
+            print(gas)
             amounts = router_contract.functions.swapExactTokensForTokens(
                 swap_params["amountIn"],
                 swap_params["amountOutMin"],

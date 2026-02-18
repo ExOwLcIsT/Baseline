@@ -41,16 +41,16 @@ class ExchangeClient:
 
         self.rateLimiter = RateLimiter()
         self.order_books: dict[str, OrderBook] = dict()
+        self.ws_url: str = config.get("ws_url")
 
     async def start(self):
         asyncio.create_task(self.watch_order_book())
 
     async def watch_order_book(self):
         async with websockets.connect(
-            "wss://stream.binance.com:9443/ws/ethusdt@depth"
+            self.ws_url
         ) as ws:
             async for message in ws:
-                print(message)
                 data = await ws.recv()
                 data_json = json.loads(data)
                 symbol = data_json["s"]
@@ -72,7 +72,8 @@ class ExchangeClient:
         try:
             res = fn()
             weight = int(
-                self.exchange.last_response_headers.get("X-Mbx-Used-Weight-1m", 0)
+                self.exchange.last_response_headers.get(
+                    "X-Mbx-Used-Weight-1m", 0)
             )
             print(
                 f"[EXCHANGE] {name} ok ({(time.time() - start) * 1000:.0f}ms) weight: {weight}"
