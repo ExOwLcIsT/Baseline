@@ -317,28 +317,32 @@ class Executor:
     def _calculate_pnl(self, ctx: ExecutionContext) -> float:
         signal = ctx.signal
         if signal.direction == Direction.BUY_CEX_SELL_DEX:
-            gross = (ctx.leg2_fill_price - ctx.leg1_fill_price) * \
-                ctx.leg1_fill_size
+            gross = (ctx.leg2_fill_price - ctx.leg1_fill_price) * ctx.leg1_fill_size
         else:
-            gross = (ctx.leg1_fill_price - ctx.leg2_fill_price) * \
-                ctx.leg1_fill_size
+            gross = (ctx.leg1_fill_price - ctx.leg2_fill_price) * ctx.leg1_fill_size
         fees = ctx.leg1_fill_size * ctx.leg1_fill_price * 0.004  # ~40 bps
         return gross - fees
 
-    def _calculate_unwind_pnl(self, ctx: ExecutionContext, unwind_result: Order) -> float:
+    def _calculate_unwind_pnl(
+        self, ctx: ExecutionContext, unwind_result: Order
+    ) -> float:
         signal = ctx.signal
-        if (signal.direction == Direction.BUY_CEX_SELL_DEX):
+        if signal.direction == Direction.BUY_CEX_SELL_DEX:
             # Bought at leg1_fill_price, sold at unwind_price
-            gross = (unwind_result.avg_fill_price -
-                     ctx.leg1_fill_price) * ctx.leg1_fill_size
+            gross = (
+                unwind_result.avg_fill_price - ctx.leg1_fill_price
+            ) * ctx.leg1_fill_size
         else:
             # Sold at leg1_fill_price, bought back at unwind_price
-            gross = (ctx.leg1_fill_price -
-                     unwind_result.avg_fill_price) * ctx.leg1_fill_size
+            gross = (
+                ctx.leg1_fill_price - unwind_result.avg_fill_price
+            ) * ctx.leg1_fill_size
 
         # Subtract both trade fees
-        fees = (ctx.leg1_fill_size * ctx.leg1_fill_price * 0.001) + (
-            ctx.leg1_fill_size * unwind_result.avg_fill_price * 0.001),
+        fees = (
+            (ctx.leg1_fill_size * ctx.leg1_fill_price * 0.001)
+            + (ctx.leg1_fill_size * unwind_result.avg_fill_price * 0.001),
+        )
 
         return gross - fees
         # Usually negative

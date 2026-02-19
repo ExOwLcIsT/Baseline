@@ -20,6 +20,7 @@ from src.kill_switch import is_kill_switch_active
 from strategy.fees import FeeStructure
 from strategy.generator import SignalGenerator
 from strategy.scorer import SignalScorer
+from tgbot.bot import TelegramConfig, TelegramNotifier
 
 
 class ArbBot:
@@ -35,6 +36,7 @@ class ArbBot:
         dex_pairs: list[str],
         trade_size: Decimal,
         chain_client: ChainClient,
+        tg_bot: TelegramNotifier
     ):
         self.exchange = exchange
         self.inventory = inventory
@@ -47,7 +49,7 @@ class ArbBot:
         self.trade_size = trade_size
         self.running = False
         self.client = chain_client
-
+        self.tg_bot = tg_bot
         self.risk_limits = RiskLimits()
         self.risk_manager = RiskManager(
             self.risk_limits, initial_capital=100.0)
@@ -86,7 +88,8 @@ class ArbBot:
         pairs = config.get("pairs")
         dex_pairs = config.get("dex_pairs")
         trade_size = Decimal(str(config.get("trade_size")))
-
+        tg_config = TelegramConfig()
+        tg_bot = TelegramNotifier(tg_config)
         return cls(
             exchange,
             inventory,
@@ -98,24 +101,29 @@ class ArbBot:
             dex_pairs,
             trade_size,
             chain_client,
+            tg_bot
         )
 
     async def run(self):
         self.running = True
         logging.info("Bot starting...")
+        self.tg_bot.bot_started(
+            self.pairs, self.executor.config.simulation_mode)
         await self.sync_balances()
 
         while self.running:
-            # try:
+            try:
                 await self.tick()
                 await asyncio.sleep(1)
-            # except Exception as e:
-            #     logging.error(f"Tick error: {e}")
-            #     await asyncio.sleep(5)
+            except Exception as e:
+                logging.error(f"Tick error: {e}")
+
+                await asyncio.sleep(5)
 
     async def tick(self):
         if is_kill_switch_active():
             logging.critical("KILL SWITCH ACTIVE")
+            self.tg_bot.kill_switch_activated()
             self.stop()
             return
 
@@ -150,27 +158,39 @@ class ArbBot:
             f"Signal: {cex_pair} spread={round(float(signal.spread_bps), 2)}bps "
             f"score={signal.score}"
         )
-        return
+        self.tg_bot._send(
+            f"executing Signal: {cex_pair} spread={round(float(signal.spread_bps), 2)}bps ")
         ctx = await self.executor.execute(signal)
 
         self.scorer.record_result(cex_pair, ctx.state == ExecutorState.DONE)
 
         if ctx.state == ExecutorState.DONE:
             logging.info(f"SUCCESS: PnL={round(ctx.actual_net_pnl, 4)}")
+            self.tg_bot.trade_success(pair=cex_pair, direction=signal.direction,
+                                      pnl=ctx.actual_net_pnl, spread_bps=signal.spread_bps)
         else:
-            logging.warning(f"FAILED: {ctx.error}")
+            if (ctx.state == ExecutorState.UNWINDING):
+                self.tg_bot.trade_unwound(pair=cex_pair,
+                                          pnl=ctx.actual_net_pnl)
+                print("UNWOUND")
+            else:
+                self.tg_bot.trade_failed(pair=cex_pair,
+                                         reason=ctx.error)
+                logging.warning(f"FAILED: {ctx.error}")
 
         await self.sync_balances()
 
     async def sync_balances(self):
         balances = self.exchange.fetch_balance()
         self.inventory.update_from_cex(Venue.BINANCE, balances)
-        wallet = os.getenv("WALLET_ADDRESS")
+        wallet = Address.from_string(os.getenv("WALLET_ADDRESS"))
         wallet_balances: dict = self.client.get_balances(wallet)
         self.inventory.update_from_wallet(Venue.WALLET, wallet_balances)
+        print(self.inventory.balances)
 
     def stop(self):
         self.running = False
+        self.tg_bot.bot_stopped()
 
 
 async def main():
@@ -181,8 +201,8 @@ async def main():
     config = {
         "pairs": pairs,
         "dex_pairs": dex_pairs,
-        "trade_size": 0.01,
-        "simulation": True,
+        "trade_size": 0.005,
+        "simulation": False,
         "signal_config": {},
     }
     bot = await ArbBot.create(config)
