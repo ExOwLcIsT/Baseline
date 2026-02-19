@@ -7,7 +7,7 @@ from dataclasses import dataclass
 class FeeStructure:
     cex_taker_bps: float = 10.0
     dex_swap_bps: float = 30.0
-    gas_cost_usd: float = 5.0
+    gas_cost_usd: float = 0.1
 
     def total_fee_bps(self, trade_value_usd: float) -> float:
         gas_bps = (self.gas_cost_usd / trade_value_usd) * 10_000

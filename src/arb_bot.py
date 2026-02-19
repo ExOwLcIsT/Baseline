@@ -31,6 +31,7 @@ class ArbBot:
         pairs: list[str],
         dex_pairs: list[str],
         trade_size: Decimal,
+        chain_client: ChainClient
     ):
         self.exchange = exchange
         self.inventory = inventory
@@ -42,6 +43,7 @@ class ArbBot:
         self.dex_pairs = dex_pairs
         self.trade_size = trade_size
         self.running = False
+        self.client = chain_client
 
     @classmethod
     async def create(cls, config: dict) -> "ArbBot":
@@ -52,15 +54,13 @@ class ArbBot:
 
         chain_client = ChainClient(os.environ["INFURA_RPC_URL"])
         pricing_engine = PricingEngine(
-            chain_client,
-            os.environ["CHAIN_URL"],
-            os.environ["INFURA_WS_RPC"]
+            chain_client, os.environ["CHAIN_URL"], os.environ["INFURA_WS_RPC"]
         )
 
         pair_addresses = [
             Address.from_string(a) for a in os.environ["UNISWAP_PAIR_ADDRESSES"].split()
         ]
-        
+
         await pricing_engine.load_pools(pair_addresses)
 
         generator = SignalGenerator(
@@ -81,7 +81,16 @@ class ArbBot:
         trade_size = Decimal(str(config.get("trade_size")))
 
         return cls(
-            exchange, inventory, scorer, executor, fees, generator, pairs, dex_pairs, trade_size
+            exchange,
+            inventory,
+            scorer,
+            executor,
+            fees,
+            generator,
+            pairs,
+            dex_pairs,
+            trade_size,
+            chain_client
         )
 
     async def run(self):
@@ -102,14 +111,18 @@ class ArbBot:
             logging.info("Circuit breaker is open")
             return
 
-        await asyncio.gather(*[self._process_pair(self.pairs[i], self.dex_pairs[i]) for i in range(len(self.pairs))])
+        await asyncio.gather(
+            *[
+                self._process_pair(self.pairs[i], self.dex_pairs[i])
+                for i in range(len(self.pairs))
+            ]
+        )
 
     async def _process_pair(self, cex_pair: str, dex_pair: str):
-        signal = await self.generator.generate(cex_pair, dex_pair,  self.trade_size)
+        signal = await self.generator.generate(cex_pair, dex_pair, self.trade_size)
         if signal is None:
             return
         print("YES")
-        return
         signal.score = self.scorer.score(signal, self.inventory.all_skews())
         if signal.score < 60:
             return
@@ -118,7 +131,7 @@ class ArbBot:
             f"Signal: {cex_pair} spread={round(float(signal.spread_bps), 2)}bps "
             f"score={signal.score}"
         )
-
+        return
         ctx = await self.executor.execute(signal)
 
         self.scorer.record_result(cex_pair, ctx.state == ExecutorState.DONE)
@@ -134,13 +147,13 @@ class ArbBot:
         balances = self.exchange.fetch_balance()
         self.inventory.update_from_cex(Venue.BINANCE, balances)
         # TODO: replace with real on-chain wallet query
+        wallet = os.getenv("WALLET_ADDRESS")
+        wallet_balances: dict = self.client.get_balances(wallet)
         self.inventory.update_from_wallet(
             Venue.WALLET,
-            {
-                "ETH": Decimal("20"),
-                "USDT": Decimal("100000"),
-            },
+            wallet_balances
         )
+        print(self.inventory.balances)
 
     def stop(self):
         self.running = False
@@ -154,7 +167,7 @@ async def main():
     config = {
         "pairs": pairs,
         "dex_pairs": dex_pairs,
-        "trade_size": 0.1,
+        "trade_size": 0.01,
         "simulation": True,
         "signal_config": {},
     }

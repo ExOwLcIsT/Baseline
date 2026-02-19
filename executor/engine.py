@@ -318,10 +318,8 @@ class Executor:
     def _calculate_pnl(self, ctx: ExecutionContext) -> float:
         signal = ctx.signal
         if signal.direction == Direction.BUY_CEX_SELL_DEX:
-            gross = (ctx.leg2_fill_price - ctx.leg1_fill_price) * \
-                ctx.leg1_fill_size
+            gross = (ctx.leg2_fill_price - ctx.leg1_fill_price) * ctx.leg1_fill_size
         else:
-            gross = (ctx.leg1_fill_price - ctx.leg2_fill_price) * \
-                ctx.leg1_fill_size
+            gross = (ctx.leg1_fill_price - ctx.leg2_fill_price) * ctx.leg1_fill_size
         fees = ctx.leg1_fill_size * ctx.leg1_fill_price * 0.004  # ~40 bps
         return gross - fees

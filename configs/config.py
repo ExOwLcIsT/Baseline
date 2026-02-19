@@ -11,5 +11,5 @@ BINANCE_CONFIG = {
         "defaultType": "spot",
     },
     "enableRateLimit": True,
-    "ws_url": os.getenv("BINANCE_WS_URL")
+    "ws_url": os.getenv("BINANCE_WS_URL"),
 }

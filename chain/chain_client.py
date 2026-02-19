@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 import math
 import os
+from token import N_TOKENS
 from typing import Optional
 from web3 import Web3
 
 from chain.chain_errors import RPCException
 from core.base_types import Address, TokenAmount, TransactionReceipt, TransactionRequest
+from pricing.token import Token
 
 
 class ChainClient:
@@ -108,6 +110,40 @@ class ChainClient:
         res = self.w3.eth.call(tx, block)
         return res
 
+    TOKENS = {
+        # native
+        "ETH":  {"address": None,                                          "decimals": 18},
+        "USDC": {"address": "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8", "decimals": 6},
+        "USDT": {"address": "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9", "decimals": 6},
+        "ARB":  {"address": "0x912CE59144191C1204E64559FE8253a0e49E6548", "decimals": 18},
+        "GMX":  {"address": "0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a", "decimals": 18},
+        "LINK": {"address": "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4", "decimals": 18},
+        "WBTC": {"address": "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f", "decimals": 8},
+    }
+
+    def get_balances(self, address: Address, tokens: list[Token] = TOKENS):
+        """Get balances of wanted tokens"""
+        balances = dict()
+        for symbol, token in tokens.items():
+            try:
+                if token["address"] is None:
+                    # Native ETH balance
+                    raw = self.w3.eth.get_balance(address.checksum)
+                else:
+                    contract = self.w3.eth.contract(
+                        address=Web3.to_checksum_address(token["address"]),
+                        abi=ERC20_ABI,
+                    )
+                    raw = contract.functions.balanceOf(address.checksum).call()
+
+                balances[symbol] = raw / 10 ** token["decimals"]
+
+            except Exception as e:
+                print(f"Failed to fetch {symbol}: {e}")
+                balances[symbol] = None
+
+        return balances
+
 
 @dataclass
 class GasPrice:
@@ -133,3 +169,28 @@ class GasPrice:
         bufferedBase = math.floor(self.base_fee * buffer)
 
         return bufferedBase + tip
+
+
+ERC20_ABI = [
+    {
+        "name": "balanceOf",
+        "type": "function",
+        "inputs": [{"name": "account", "type": "address"}],
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "view",
+    },
+    {
+        "name": "decimals",
+        "type": "function",
+        "inputs": [],
+        "outputs": [{"name": "", "type": "uint8"}],
+        "stateMutability": "view",
+    },
+    {
+        "name": "symbol",
+        "type": "function",
+        "inputs": [],
+        "outputs": [{"name": "", "type": "string"}],
+        "stateMutability": "view",
+    },
+]

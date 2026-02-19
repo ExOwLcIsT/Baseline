@@ -35,7 +35,9 @@ class SignalGenerator:
 
         self.last_signal_time: dict[str, Decimal] = {}
 
-    async def generate(self, cex_pair: str, dex_pair: str, size: Decimal) -> Optional[Signal]:
+    async def generate(
+        self, cex_pair: str, dex_pair: str, size: Decimal
+    ) -> Optional[Signal]:
         """
         Attempt to generate a signal for the given pair and size.
         Returns Signal if opportunity found and validated, None otherwise.
@@ -44,17 +46,16 @@ class SignalGenerator:
             return None
 
         prices = await self._fetch_prices(cex_pair, dex_pair, size)
-        print(prices)
 
         if prices is None:
             return None
-
+        print(prices)
         # Calculate spreads both directions
-        spread_a = (prices["dex_sell"] - prices["cex_ask"]
-                    ) / prices["cex_ask"] * 10_000
-        spread_b = (prices["cex_bid"] - prices["dex_buy"]) / \
-            prices["dex_buy"] * 10_000
-
+        spread_a = (prices["dex_sell"] - prices["cex_ask"]) / prices["cex_ask"] * 10_000
+        spread_b = (prices["cex_bid"] - prices["dex_buy"]) / prices["dex_buy"] * 10_000
+        print(spread_a)
+        print(spread_b)
+        
         # Pick better direction
         if spread_a > spread_b and spread_a >= self.min_spread_bps:
             direction = Direction.BUY_CEX_SELL_DEX
@@ -83,11 +84,11 @@ class SignalGenerator:
             return None
 
         # Validation
-        inventory_ok = self._check_inventory(pair, direction, size, cex_price)
+        inventory_ok = self._check_inventory(cex_pair, direction, size, cex_price)
         within_limits = trade_value <= self.max_position_usd
 
         signal = Signal.create(
-            pair=pair,
+            pair=cex_pair,
             direction=direction,
             cex_price=cex_price,
             dex_price=dex_price,
@@ -102,7 +103,7 @@ class SignalGenerator:
             within_limits=within_limits,
         )
 
-        self.last_signal_time[pair] = time.time()
+        self.last_signal_time[cex_pair] = time.time()
         return signal
 
     def _in_cooldown(self, pair: str) -> bool:
@@ -137,13 +138,12 @@ class SignalGenerator:
             amount_in = int(size * Tokens[base].decimals)
 
             dex_prices = await self.pricing.get_prices(
-                token_in=Tokens[base], token_out=Tokens[quote], amount_in=amount_in)
+                token_in=Tokens[base], token_out=Tokens[quote], amount_in=amount_in
+            )
 
-            dex_buy = dex_prices.get("dex_buy") / \
-                Tokens[quote].decimals / float(size)
+            dex_buy = dex_prices.get("dex_buy") / Tokens[quote].decimals / float(size)
 
-            dex_sell = dex_prices.get("dex_sell") / \
-                Tokens[quote].decimals / float(size)
+            dex_sell = dex_prices.get("dex_sell") / Tokens[quote].decimals / float(size)
             cex_bid = bid_walk_result.get("avg_price")
             cex_ask = ask_walk_result.get("avg_price")
             if cex_bid == 0 or cex_ask == 0:

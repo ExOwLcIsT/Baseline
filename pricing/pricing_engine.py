@@ -119,8 +119,7 @@ class PricingEngine:
         # --- simulate ---
         simulated: Quote = await self.get_quote(token_in, token_out, amount_in, 0)
 
-        router_address = Address.from_string(
-            os.getenv("UNISWAP_V2_ROUTER_ADDRESS"))
+        router_address = Address.from_string(os.getenv("UNISWAP_V2_ROUTER_ADDRESS"))
         deadline = int(time.time()) + 180
         wallet = WalletManager.from_env()
 
@@ -174,7 +173,12 @@ class PricingEngine:
         tx_hash = self.client.send_transaction(signed_tx.raw_transaction)
         return {"price": simulated.simulated_output / token_out.decimals / size}
 
-    async def get_prices(self, token_in: Token, token_out: Token, amount_in: int,):
+    async def get_prices(
+        self,
+        token_in: Token,
+        token_out: Token,
+        amount_in: int,
+    ):
 
         await self.refresh_all_pools()
         route, net_output = self.router.find_best_route(
@@ -182,10 +186,7 @@ class PricingEngine:
         )
         dex_sell = route.get_output(amount_in=amount_in)
         dex_buy = route.get_input(amount_out=amount_in)
-        return {
-            "dex_buy": dex_buy,
-            "dex_sell": dex_sell
-        }
+        return {"dex_buy": dex_buy, "dex_sell": dex_sell}
 
 
 @dataclass
@@ -201,8 +202,7 @@ class Quote:
     def is_valid(self) -> bool:
         """Quote valid if simulation matches expectation within tolerance."""
         tolerance = 0.001  # 0.1%
-        diff = abs(self.expected_output - self.simulated_output) / \
-            self.expected_output
+        diff = abs(self.expected_output - self.simulated_output) / self.expected_output
         return diff < tolerance
 
 

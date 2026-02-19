@@ -53,8 +53,7 @@ class RouteFinder:
                 routes.append(Route(pools_path.copy(), tokens_path.copy()))
                 return
 
-            neighbors: dict[UniswapV2Pair,
-                            Token] = self.graph.get(current.name)
+            neighbors: dict[UniswapV2Pair, Token] = self.graph.get(current.name)
 
             if len(neighbors) == 0:
                 return
@@ -115,8 +114,7 @@ class RouteFinder:
         for route in routes:
             grossOutput = route.get_output(amount_in)
             gasCost = route.estimate_gas() * gas_price_gwei * 1_000_000_000
-            gasCostInOutputToken = self.convert_to_output_token(
-                gasCost, token_out)
+            gasCostInOutputToken = self.convert_to_output_token(gasCost, token_out)
             netOutput = grossOutput - gasCostInOutputToken
             if netOutput > bestNetOutput:
                 bestNetOutput = netOutput

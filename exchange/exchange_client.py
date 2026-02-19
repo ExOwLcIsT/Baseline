@@ -38,6 +38,7 @@ class ExchangeClient:
                 "enableRateLimit": config.get("enableRateLimit", True),
             }
         )
+        
 
         self.rateLimiter = RateLimiter()
         self.order_books: dict[str, OrderBook] = dict()
@@ -47,9 +48,7 @@ class ExchangeClient:
         asyncio.create_task(self.watch_order_book())
 
     async def watch_order_book(self):
-        async with websockets.connect(
-            self.ws_url
-        ) as ws:
+        async with websockets.connect(self.ws_url) as ws:
             async for message in ws:
                 data = await ws.recv()
                 data_json = json.loads(data)
@@ -72,8 +71,7 @@ class ExchangeClient:
         try:
             res = fn()
             weight = int(
-                self.exchange.last_response_headers.get(
-                    "X-Mbx-Used-Weight-1m", 0)
+                self.exchange.last_response_headers.get("X-Mbx-Used-Weight-1m", 0)
             )
             print(
                 f"[EXCHANGE] {name} ok ({(time.time() - start) * 1000:.0f}ms) weight: {weight}"
