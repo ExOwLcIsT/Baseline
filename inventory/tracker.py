@@ -43,8 +43,7 @@ class InventoryTracker:
 
     def _find(self, venue: Venue, asset: str) -> Balance | None:
         return next(
-            (b for b in self.balances if b.venue ==
-             venue and b.asset == asset), None
+            (b for b in self.balances if b.venue == venue and b.asset == asset), None
         )
 
     # ------------------------------------------------------------------ #
@@ -64,8 +63,7 @@ class InventoryTracker:
             bal = self._find(venue, asset)
             if bal is None:
                 self.balances.append(
-                    Balance(venue, asset, data["free"],
-                            data.get("used", Decimal("0")))
+                    Balance(venue, asset, data["free"], data.get("used", Decimal("0")))
                 )
             else:
                 bal.free = data["free"]
@@ -82,9 +80,7 @@ class InventoryTracker:
         for asset, amount in balances.items():
             bal = self._find(venue, asset)
             if bal is None:
-                self.balances.append(
-                    Balance(venue, asset, amount, Decimal("0"))
-                )
+                self.balances.append(Balance(venue, asset, amount, Decimal("0")))
             else:
                 bal.free = amount if amount is not None else Decimal(0)
                 bal.locked = Decimal("0")
@@ -256,8 +252,7 @@ class InventoryTracker:
         """
         # Pre-flight
         check = (
-            self.can_execute(venue, quote_asset, quote_amount,
-                             venue, fee_asset, fee)
+            self.can_execute(venue, quote_asset, quote_amount, venue, fee_asset, fee)
             if side == "buy"
             else self.can_execute(venue, base_asset, base_amount, venue, fee_asset, fee)
         )
@@ -314,7 +309,7 @@ class InventoryTracker:
                     "deviation_pct": 0.0,
                 }
 
-        total = sum((v["amount"] for v in venues.values()), Decimal("0"))
+        total = sum((v["amount"] for v in venues.values()))
 
         if total == 0:
             return {

@@ -7,6 +7,7 @@ import time
 from typing import Optional
 
 from exchange.exchange_client import ExchangeClient
+from exchange.order import Order
 from executor.circuit_breaker import CircuitBreaker
 from executor.replay_protection import ReplayProtection
 from inventory.tracker import InventoryTracker
@@ -292,8 +293,6 @@ class Executor:
             f"UNWINDING: {unwind_side} {unwind_size} ${signal.pair} on {unwind_venue}",
         )
 
-        # TODO
-        # Unwind at lower price
         try:
             result = await self.exchange.create_market_order(
                 signal.pair,
@@ -301,10 +300,10 @@ class Executor:
                 unwind_size,
             )
 
-            unwindPnl = self.calculateUnwindPnl(ctx, result)
+            unwindPnl = self._calculate_unwind_pnl(ctx, result)
             return {
                 "status": "unwound",
-                "fill_price": result.avgFillPrice,
+                "fill_price": result.get("avg_fill_price"),
                 "pnl": unwindPnl,
             }
         except Exception as e:
@@ -318,8 +317,28 @@ class Executor:
     def _calculate_pnl(self, ctx: ExecutionContext) -> float:
         signal = ctx.signal
         if signal.direction == Direction.BUY_CEX_SELL_DEX:
-            gross = (ctx.leg2_fill_price - ctx.leg1_fill_price) * ctx.leg1_fill_size
+            gross = (ctx.leg2_fill_price - ctx.leg1_fill_price) * \
+                ctx.leg1_fill_size
         else:
-            gross = (ctx.leg1_fill_price - ctx.leg2_fill_price) * ctx.leg1_fill_size
+            gross = (ctx.leg1_fill_price - ctx.leg2_fill_price) * \
+                ctx.leg1_fill_size
         fees = ctx.leg1_fill_size * ctx.leg1_fill_price * 0.004  # ~40 bps
         return gross - fees
+
+    def _calculate_unwind_pnl(self, ctx: ExecutionContext, unwind_result: Order) -> float:
+        signal = ctx.signal
+        if (signal.direction == Direction.BUY_CEX_SELL_DEX):
+            # Bought at leg1_fill_price, sold at unwind_price
+            gross = (unwind_result.avg_fill_price -
+                     ctx.leg1_fill_price) * ctx.leg1_fill_size
+        else:
+            # Sold at leg1_fill_price, bought back at unwind_price
+            gross = (ctx.leg1_fill_price -
+                     unwind_result.avg_fill_price) * ctx.leg1_fill_size
+
+        # Subtract both trade fees
+        fees = (ctx.leg1_fill_size * ctx.leg1_fill_price * 0.001) + (
+            ctx.leg1_fill_size * unwind_result.avg_fill_price * 0.001),
+
+        return gross - fees
+        # Usually negative

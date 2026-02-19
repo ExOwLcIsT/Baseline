@@ -30,15 +30,12 @@ class ExchangeClient:
         self.exchange = exchangeClass(
             {
                 "apiKey": config.get("apiKey", ""),
-                "secret": config.get(
-                    "secret",
-                ),
+                "secret": config.get("secret", ""),
                 "sandbox": config.get("sandbox", True),
                 "options": config.get("options", {}),
                 "enableRateLimit": config.get("enableRateLimit", True),
             }
         )
-        
 
         self.rateLimiter = RateLimiter()
         self.order_books: dict[str, OrderBook] = dict()
@@ -71,7 +68,8 @@ class ExchangeClient:
         try:
             res = fn()
             weight = int(
-                self.exchange.last_response_headers.get("X-Mbx-Used-Weight-1m", 0)
+                self.exchange.last_response_headers.get(
+                    "X-Mbx-Used-Weight-1m", 0)
             )
             print(
                 f"[EXCHANGE] {name} ok ({(time.time() - start) * 1000:.0f}ms) weight: {weight}"

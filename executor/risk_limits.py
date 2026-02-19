@@ -1,0 +1,11 @@
+class RiskLimits:    
+    max_trade_usd=5.0,           
+    max_trade_pct=0.20,
+    max_position_per_token=30.0,
+    max_open_positions=1,
+    max_loss_per_trade=5.0,
+    max_daily_loss=10.0,          
+    max_drawdown_pct=0.20,
+    max_trades_per_hour=20,
+    consecutive_loss_limit=3,
+        

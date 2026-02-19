@@ -27,8 +27,8 @@ class SignalGenerator:
         self.inventory: InventoryTracker = inventory_tracker
         self.fees: FeeStructure = fee_structure
 
-        self.min_spread_bps = config.get("min_spread_bps", 50)
-        self.min_profit_usd = config.get("min_profit_usd", 5.0)
+        self.min_spread_bps = config.get("min_spread_bps", 10)
+        self.min_profit_usd = config.get("min_profit_usd", 1.0)
         self.max_position_usd = config.get("max_position_usd", 10_000)
         self.signal_ttl = config.get("signal_ttl_seconds", 5)
         self.cooldown = config.get("cooldown_seconds", 2)
@@ -49,13 +49,14 @@ class SignalGenerator:
 
         if prices is None:
             return None
-        print(prices)
         # Calculate spreads both directions
-        spread_a = (prices["dex_sell"] - prices["cex_ask"]) / prices["cex_ask"] * 10_000
-        spread_b = (prices["cex_bid"] - prices["dex_buy"]) / prices["dex_buy"] * 10_000
-        print(spread_a)
-        print(spread_b)
-        
+        spread_a = (prices["dex_sell"] - prices["cex_ask"]
+                    ) / prices["cex_ask"] * 10_000
+        spread_b = (prices["cex_bid"] - prices["dex_buy"]) / \
+            prices["dex_buy"] * 10_000
+        print("BUY_CEX_SELL_DEX bps", round(spread_a, 2))
+        print("BUY_DEX_SELL_CEX bps", round(spread_b, 2))
+
         # Pick better direction
         if spread_a > spread_b and spread_a >= self.min_spread_bps:
             direction = Direction.BUY_CEX_SELL_DEX
@@ -72,19 +73,21 @@ class SignalGenerator:
                 prices["dex_buy"],
             )
         else:
+            print("Spread is too low")
             return None
 
         # Economics
-        trade_value = size * cex_price
-        gross_pnl = (spread / 10_000) * trade_value
+        trade_value = float(size * cex_price)
+        gross_pnl = float(spread / 10_000) * trade_value
         fees = (self.fees.total_fee_bps(trade_value) / 10_000) * trade_value
         net_pnl = gross_pnl - fees
-
         if net_pnl < self.min_profit_usd:
+            print(f"profit is too low ({net_pnl} < {self.min_profit_usd})")
             return None
 
         # Validation
-        inventory_ok = self._check_inventory(cex_pair, direction, size, cex_price)
+        inventory_ok = self._check_inventory(
+            cex_pair, direction, size, cex_price)
         within_limits = trade_value <= self.max_position_usd
 
         signal = Signal.create(
@@ -141,9 +144,11 @@ class SignalGenerator:
                 token_in=Tokens[base], token_out=Tokens[quote], amount_in=amount_in
             )
 
-            dex_buy = dex_prices.get("dex_buy") / Tokens[quote].decimals / float(size)
+            dex_buy = dex_prices.get("dex_buy") / \
+                Tokens[quote].decimals / float(size)
 
-            dex_sell = dex_prices.get("dex_sell") / Tokens[quote].decimals / float(size)
+            dex_sell = dex_prices.get("dex_sell") / \
+                Tokens[quote].decimals / float(size)
             cex_bid = bid_walk_result.get("avg_price")
             cex_ask = ask_walk_result.get("avg_price")
             if cex_bid == 0 or cex_ask == 0:

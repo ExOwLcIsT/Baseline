@@ -12,8 +12,11 @@ from configs.config import BINANCE_CONFIG
 from core.base_types import Address
 from exchange.exchange_client import ExchangeClient
 from executor.engine import Executor, ExecutorConfig, ExecutorState
+from executor.risk_limits import RiskLimits
+from executor.risk_manager import RiskManager
 from inventory.tracker import InventoryTracker, Venue
 from pricing.pricing_engine import PricingEngine
+from src.kill_switch import is_kill_switch_active
 from strategy.fees import FeeStructure
 from strategy.generator import SignalGenerator
 from strategy.scorer import SignalScorer
@@ -31,7 +34,7 @@ class ArbBot:
         pairs: list[str],
         dex_pairs: list[str],
         trade_size: Decimal,
-        chain_client: ChainClient
+        chain_client: ChainClient,
     ):
         self.exchange = exchange
         self.inventory = inventory
@@ -44,6 +47,10 @@ class ArbBot:
         self.trade_size = trade_size
         self.running = False
         self.client = chain_client
+
+        self.risk_limits = RiskLimits()
+        self.risk_manager = RiskManager(
+            self.risk_limits, initial_capital=100.0)
 
     @classmethod
     async def create(cls, config: dict) -> "ArbBot":
@@ -90,7 +97,7 @@ class ArbBot:
             pairs,
             dex_pairs,
             trade_size,
-            chain_client
+            chain_client,
         )
 
     async def run(self):
@@ -99,14 +106,19 @@ class ArbBot:
         await self.sync_balances()
 
         while self.running:
-            try:
+            # try:
                 await self.tick()
                 await asyncio.sleep(1)
-            except Exception as e:
-                logging.error(f"Tick error: {e}")
-                await asyncio.sleep(5)
+            # except Exception as e:
+            #     logging.error(f"Tick error: {e}")
+            #     await asyncio.sleep(5)
 
     async def tick(self):
+        if is_kill_switch_active():
+            logging.critical("KILL SWITCH ACTIVE")
+            self.stop()
+            return
+
         if self.executor.circuit_breaker.is_open():
             logging.info("Circuit breaker is open")
             return
@@ -122,9 +134,16 @@ class ArbBot:
         signal = await self.generator.generate(cex_pair, dex_pair, self.trade_size)
         if signal is None:
             return
-        print("YES")
+
         signal.score = self.scorer.score(signal, self.inventory.all_skews())
+
         if signal.score < 60:
+            return
+
+        allowed, reason = self.risk_manager.check_pre_trade(signal)
+
+        if not allowed:
+            logging.warning(f"Risk check failed:{reason}")
             return
 
         logging.info(
@@ -146,14 +165,9 @@ class ArbBot:
     async def sync_balances(self):
         balances = self.exchange.fetch_balance()
         self.inventory.update_from_cex(Venue.BINANCE, balances)
-        # TODO: replace with real on-chain wallet query
         wallet = os.getenv("WALLET_ADDRESS")
         wallet_balances: dict = self.client.get_balances(wallet)
-        self.inventory.update_from_wallet(
-            Venue.WALLET,
-            wallet_balances
-        )
-        print(self.inventory.balances)
+        self.inventory.update_from_wallet(Venue.WALLET, wallet_balances)
 
     def stop(self):
         self.running = False
