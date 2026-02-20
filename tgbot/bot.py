@@ -8,9 +8,7 @@ import os
 from dataclasses import dataclass
 
 KILL_SWITCH_FILE = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "tmp",
-    "arb_bot_kill"
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tmp", "arb_bot_kill"
 )
 
 
@@ -28,8 +26,8 @@ class TelegramNotifier:
     def _send(self, text: str, reply_markup: dict = None):
         try:
             payload = {
-                "chat_id":    self.config.chat_id,
-                "text":       text,
+                "chat_id": self.config.chat_id,
+                "text": text,
                 "parse_mode": "Markdown",
             }
             if reply_markup:
@@ -61,12 +59,18 @@ class TelegramNotifier:
     def _get_kill_switch_keyboard(self) -> dict:
         is_active = os.path.exists(KILL_SWITCH_FILE)
         return {
-            "inline_keyboard": [[
-                {
-                    "text": "🛑 ACTIVATE KILL SWITCH" if not is_active else "✅ DEACTIVATE KILL SWITCH",
-                    "callback_data": "kill_switch_toggle",
-                }
-            ]]
+            "inline_keyboard": [
+                [
+                    {
+                        "text": (
+                            "🛑 ACTIVATE KILL SWITCH"
+                            if not is_active
+                            else "✅ DEACTIVATE KILL SWITCH"
+                        ),
+                        "callback_data": "kill_switch_toggle",
+                    }
+                ]
+            ]
         }
 
     def send_status(self, status: dict):
@@ -116,8 +120,7 @@ class TelegramNotifier:
         if os.path.exists(KILL_SWITCH_FILE):
             os.remove(KILL_SWITCH_FILE)
             self._send(
-                "✅ *KILL SWITCH DEACTIVATED*\n"
-                "Bot will resume on next tick.",
+                "✅ *KILL SWITCH DEACTIVATED*\n" "Bot will resume on next tick.",
                 reply_markup=self._get_kill_switch_keyboard(),
             )
             logging.info("Kill switch deactivated via Telegram")
@@ -125,8 +128,7 @@ class TelegramNotifier:
             os.makedirs(os.path.dirname(KILL_SWITCH_FILE), exist_ok=True)
             open(KILL_SWITCH_FILE, "w").close()
             self._send(
-                "🛑 *KILL SWITCH ACTIVATED*\n"
-                "Bot is stopping.",
+                "🛑 *KILL SWITCH ACTIVATED*\n" "Bot is stopping.",
                 reply_markup=self._get_kill_switch_keyboard(),
             )
             logging.critical("Kill switch activated via Telegram")
@@ -145,18 +147,10 @@ class TelegramNotifier:
         )
 
     def trade_failed(self, pair: str, reason: str):
-        self._send(
-            f"❌ *TRADE FAILED*\n"
-            f"Pair:   `{pair}`\n"
-            f"Reason: `{reason}`"
-        )
+        self._send(f"❌ *TRADE FAILED*\n" f"Pair:   `{pair}`\n" f"Reason: `{reason}`")
 
     def trade_unwound(self, pair: str, pnl: float):
-        self._send(
-            f"⚠️ *POSITION UNWOUND*\n"
-            f"Pair: `{pair}`\n"
-            f"PnL:  `${pnl:.4f}`"
-        )
+        self._send(f"⚠️ *POSITION UNWOUND*\n" f"Pair: `{pair}`\n" f"PnL:  `${pnl:.4f}`")
 
     def risk_blocked(self, pair: str, reason: str):
         self._send(
@@ -179,9 +173,7 @@ class TelegramNotifier:
     def bot_started(self, pairs: list[str], simulation: bool):
         mode = "SIMULATION" if simulation else "🟢 LIVE"
         self._send(
-            f"🟢 *BOT STARTED*\n"
-            f"Mode:  `{mode}`\n"
-            f"Pairs: `{', '.join(pairs)}`",
+            f"🟢 *BOT STARTED*\n" f"Mode:  `{mode}`\n" f"Pairs: `{', '.join(pairs)}`",
             reply_markup=self._get_kill_switch_keyboard(),
         )
 
@@ -189,8 +181,4 @@ class TelegramNotifier:
         self._send("⛔ *BOT STOPPED*")
 
     def error(self, context: str, error: str):
-        self._send(
-            f"🆘 *ERROR*\n"
-            f"Context: `{context}`\n"
-            f"Error:   `{error}`"
-        )
+        self._send(f"🆘 *ERROR*\n" f"Context: `{context}`\n" f"Error:   `{error}`")

@@ -181,11 +181,10 @@ class PricingEngine:
         amount_in: int,
     ):
 
-        # await self.refresh_all_pools()
+        await self.refresh_all_pools()
         route, net_output = self.router.find_best_route(
             token_in, token_out, amount_in, 0
         )
-
         dex_sell = route.get_output(amount_in=amount_in)
         dex_buy = route.get_input(amount_out=amount_in)
         return {"dex_buy": dex_buy, "dex_sell": dex_sell}

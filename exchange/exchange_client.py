@@ -68,7 +68,8 @@ class ExchangeClient:
         try:
             res = fn()
             weight = int(
-                self.exchange.last_response_headers.get("X-Mbx-Used-Weight-1m", 0)
+                self.exchange.last_response_headers.get(
+                    "X-Mbx-Used-Weight-1m", 0)
             )
             print(
                 f"[EXCHANGE] {name} ok ({(time.time() - start) * 1000:.0f}ms) weight: {weight}"
@@ -124,7 +125,6 @@ class ExchangeClient:
         }
         """
         order_book: OrderBook = self.order_books.get(symbol)
-
         if order_book is None:
             return None
         return_order_book = OrderBook(

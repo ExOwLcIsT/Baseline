@@ -120,7 +120,6 @@ asyncio.run(
 )
 
 
-# engine.swap(Decimal(0.1), ETHToken, USDCToken)
 quote = engine.get_quote(ETHToken, USDToken, 2 * 10**18, 0)
 print(quote.__dict__)
 # quote = await engine.getQuote(

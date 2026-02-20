@@ -41,7 +41,7 @@ class RouteFinder:
 
         def dfs(
             current: Token,
-            visited: {str},
+            visited: set[str],
             pools_path: list[UniswapV2Pair],
             tokens_path: list[Token],
             hopsLeft: int,
@@ -56,7 +56,7 @@ class RouteFinder:
             neighbors: dict[UniswapV2Pair,
                             Token] = self.graph.get(current.name)
 
-            if len(neighbors) == 0:
+            if neighbors is None or len(neighbors) == 0:
                 return
 
             for pool, token in neighbors.items():
@@ -88,7 +88,10 @@ class RouteFinder:
             Address.from_string(os.getenv("WETH")),
         )
         routes = self.find_all_routes(ethToken, token_out, 5)
+        if routes is None or len(routes) == 0:
+            return 0
         minGas = routes[0].get_output(gas_wei)
+
         for i in range(0, len(routes)):
             out = routes[i].get_output(gas_wei)
             if out < minGas:

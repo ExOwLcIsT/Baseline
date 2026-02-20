@@ -28,7 +28,8 @@ class SignalScorer:
             "inventory": self._score_inventory(signal, inventory_state),
             "history": self._score_history(signal.pair),
         }
-        weighted = sum(scores[k] * getattr(self.config, f"{k}_weight") for k in scores)
+        weighted = sum(scores[k] * getattr(self.config,
+                       f"{k}_weight") for k in scores)
         return round(max(0, min(100, weighted)), 1)
 
     def _score_liquidity(self, spread_bps: Decimal) -> float:

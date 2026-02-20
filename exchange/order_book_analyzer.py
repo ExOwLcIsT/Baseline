@@ -30,10 +30,10 @@ class OrderBookAnalyzer:
         best_order = (
             self.order_book.best_ask if side == "buy" else self.order_book.best_bid
         )
-
+        book_qty = sum(p[1] for p in road)
         levels = 0
         total_cost = Decimal(0)
-        qty_left = qty
+        qty_left = min(qty, book_qty)
         fills = []
 
         for level in road:
@@ -51,7 +51,7 @@ class OrderBookAnalyzer:
 
         qty_left = max(qty_left, Decimal(0))
         filled = qty - qty_left
-        avg_price = total_cost / filled if filled > 0 else Decimal(0)
+        avg_price = total_cost / filled if filled > Decimal(0) else Decimal(0)
 
         slippage = avg_price - best_order[0]
         slippage_bps = round(slippage / best_order[0] * Decimal(10_000), 2)
@@ -63,6 +63,7 @@ class OrderBookAnalyzer:
             "levels_consumed": levels,
             "fully_filled": qty_left <= 0,
             "fills": fills,
+            "size": min(qty, book_qty)
         }
 
     def depth_at_bps(self, side: str, bps: int) -> Decimal:

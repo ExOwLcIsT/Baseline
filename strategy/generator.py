@@ -28,7 +28,7 @@ class SignalGenerator:
         self.fees: FeeStructure = fee_structure
 
         self.min_spread_bps = config.get("min_spread_bps", 10)
-        self.min_profit_usd = config.get("min_profit_usd", 0.5)
+        self.min_profit_usd = config.get("min_profit_usd", 0.01)
         self.max_position_usd = config.get("max_position_usd", 10_000)
         self.signal_ttl = config.get("signal_ttl_seconds", 5)
         self.cooldown = config.get("cooldown_seconds", 2)
@@ -46,12 +46,14 @@ class SignalGenerator:
             return None
 
         prices = await self._fetch_prices(cex_pair, dex_pair, size)
-
         if prices is None:
             return None
+        size = prices.get("size", size)  # change size if not enough on CEX
         # Calculate spreads both directions
-        spread_a = (prices["dex_sell"] - prices["cex_ask"]) / prices["cex_ask"] * 10_000
-        spread_b = (prices["cex_bid"] - prices["dex_buy"]) / prices["dex_buy"] * 10_000
+        spread_a = (prices["dex_sell"] - prices["cex_ask"]
+                    ) / prices["cex_ask"] * 10_000
+        spread_b = (prices["cex_bid"] - prices["dex_buy"]) / \
+            prices["dex_buy"] * 10_000
         print("BUY_CEX_SELL_DEX bps", round(spread_a, 2))
         print("BUY_DEX_SELL_CEX bps", round(spread_b, 2))
 
@@ -84,11 +86,12 @@ class SignalGenerator:
             return None
 
         # Validation
-        inventory_ok = self._check_inventory(cex_pair, direction, size, cex_price)
+        inventory_ok = self._check_inventory(
+            cex_pair, direction, size, cex_price)
         within_limits = trade_value <= self.max_position_usd
 
         signal = Signal.create(
-            pair=cex_pair,
+            pair=dex_pair,
             direction=direction,
             cex_price=cex_price,
             dex_price=dex_price,
@@ -131,28 +134,34 @@ class SignalGenerator:
 
             if ob is None:
                 raise Exception("Order book is None")
-
             analyzer = OrderBookAnalyzer(ob)
             bid_walk_result = analyzer.walk_the_book("sell", size)
             ask_walk_result = analyzer.walk_the_book("buy", size)
+            if bid_walk_result.get("size") > Decimal(0) and ask_walk_result.get("size") > Decimal(0):
+                size = min(bid_walk_result.get("size"),
+                        ask_walk_result.get("size"))
             amount_in = int(size * Tokens[base].decimals)
 
             dex_prices = await self.pricing.get_prices(
                 token_in=Tokens[base], token_out=Tokens[quote], amount_in=amount_in
             )
+            dex_buy = dex_prices.get("dex_buy") / \
+                Tokens[quote].decimals / float(size)
 
-            dex_buy = dex_prices.get("dex_buy") / Tokens[quote].decimals / float(size)
-
-            dex_sell = dex_prices.get("dex_sell") / Tokens[quote].decimals / float(size)
+            dex_sell = dex_prices.get("dex_sell") / \
+                Tokens[quote].decimals / float(size)
             cex_bid = bid_walk_result.get("avg_price")
             cex_ask = ask_walk_result.get("avg_price")
+
             if cex_bid == 0 or cex_ask == 0:
                 return None
+
             return {
                 "cex_bid": cex_bid,
                 "cex_ask": cex_ask,
                 "dex_buy": Decimal(dex_buy),
                 "dex_sell": Decimal(dex_sell),
+                "size": size
             }
         except Exception as e:
             print("Error fetching prices")
@@ -164,7 +173,12 @@ Tokens: dict[str, Token] = {
     "USDC": Token(
         "USDC",
         10**6,
-        Address.from_string("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"),
+        Address.from_string("0xaf88d065e77c8cC2239327C5EDb3A432268e5831"),
+    ),
+    "ARB": Token(
+        "ARB",
+        10**18,
+        Address.from_string("0x912CE59144191C1204E64559FE8253a0e49E6548"),
     ),
     "ETH": Token(
         "WETH",

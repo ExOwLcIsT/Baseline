@@ -36,7 +36,7 @@ class ArbBot:
         dex_pairs: list[str],
         trade_size: Decimal,
         chain_client: ChainClient,
-        tg_bot: TelegramNotifier
+        tg_bot: TelegramNotifier,
     ):
         self.exchange = exchange
         self.inventory = inventory
@@ -51,8 +51,7 @@ class ArbBot:
         self.client = chain_client
         self.tg_bot = tg_bot
         self.risk_limits = RiskLimits()
-        self.risk_manager = RiskManager(
-            self.risk_limits, initial_capital=100.0)
+        self.risk_manager = RiskManager(self.risk_limits, initial_capital=100.0)
 
     @classmethod
     async def create(cls, config: dict) -> "ArbBot":
@@ -81,8 +80,7 @@ class ArbBot:
         )
         scorer = SignalScorer()
 
-        exec_config = ExecutorConfig(
-            simulation_mode=config.get("simulation", True))
+        exec_config = ExecutorConfig(simulation_mode=config.get("simulation", True))
         executor = Executor(exchange, pricing_engine, inventory, exec_config)
 
         pairs = config.get("pairs")
@@ -101,14 +99,13 @@ class ArbBot:
             dex_pairs,
             trade_size,
             chain_client,
-            tg_bot
+            tg_bot,
         )
 
     async def run(self):
         self.running = True
         logging.info("Bot starting...")
-        self.tg_bot.bot_started(
-            self.pairs, self.executor.config.simulation_mode)
+        self.tg_bot.bot_started(self.pairs, self.executor.config.simulation_mode)
         await self.sync_balances()
 
         while self.running:
@@ -159,23 +156,26 @@ class ArbBot:
             f"score={signal.score}"
         )
         self.tg_bot._send(
-            f"executing Signal: {cex_pair} spread={round(float(signal.spread_bps), 2)}bps ")
+            f"executing Signal: {cex_pair} spread={round(float(signal.spread_bps), 2)}bps "
+        )
         ctx = await self.executor.execute(signal)
 
         self.scorer.record_result(cex_pair, ctx.state == ExecutorState.DONE)
 
         if ctx.state == ExecutorState.DONE:
             logging.info(f"SUCCESS: PnL={round(ctx.actual_net_pnl, 4)}")
-            self.tg_bot.trade_success(pair=cex_pair, direction=signal.direction,
-                                      pnl=ctx.actual_net_pnl, spread_bps=signal.spread_bps)
+            self.tg_bot.trade_success(
+                pair=cex_pair,
+                direction=signal.direction,
+                pnl=ctx.actual_net_pnl,
+                spread_bps=signal.spread_bps,
+            )
         else:
-            if (ctx.state == ExecutorState.UNWINDING):
-                self.tg_bot.trade_unwound(pair=cex_pair,
-                                          pnl=ctx.actual_net_pnl)
+            if ctx.state == ExecutorState.UNWINDING:
+                self.tg_bot.trade_unwound(pair=cex_pair, pnl=ctx.actual_net_pnl)
                 print("UNWOUND")
             else:
-                self.tg_bot.trade_failed(pair=cex_pair,
-                                         reason=ctx.error)
+                self.tg_bot.trade_failed(pair=cex_pair, reason=ctx.error)
                 logging.warning(f"FAILED: {ctx.error}")
 
         await self.sync_balances()
@@ -201,7 +201,7 @@ async def main():
     config = {
         "pairs": pairs,
         "dex_pairs": dex_pairs,
-        "trade_size": 0.005,
+        "trade_size": 101,
         "simulation": False,
         "signal_config": {},
     }
